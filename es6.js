@@ -1,4 +1,5 @@
 /*!
+ * ES6 v1.0.0
  * This module provides an approximate equivalent implementation of ES6(Harmony)'s
  * new features in pure ES5 for backward compatibility. This API has no dependencies.
  *
@@ -49,8 +50,6 @@ var _global = testing ? exports : global;
     var symbolHiddenCounter = 0;
 
     var globalSymbolRegistry = [];
-
-    var arrayConcat = Array.prototype.concat;
 
     var slice = Array.prototype.slice;
 
@@ -152,9 +151,9 @@ var _global = testing ? exports : global;
         }
     };
 
-    // It affects array1 and appends array2 after array1
+    /* It affects array1 and appends array2 at the end of array1 */
     var appendArray = function (array1, array2) {
-        // Returns if these are not array or array-like objects
+        // Returns immediately if these are not array or not array-like objects
         if (!(typeof array1.length === "number" && array1.length >= 0 && typeof array2.length === "number" && array2.length >= 0))
             return;
         var length1 = Math.floor(array1.length),
@@ -171,10 +170,10 @@ var _global = testing ? exports : global;
         if (this === undefined || this === null)
             throw new TypeError("Array.prototype.concat called on null or undefined");
 
-        //Boxing 'this' value to wrapper object
+        // Boxing 'this' value to wrapper object
         var self = Object(this),
             targets = slice.call(arguments),
-            outputs = [];
+            outputs = []; // Later it may affected by Symbol
 
         targets.unshift(self);
 
@@ -182,7 +181,6 @@ var _global = testing ? exports : global;
             // If target is primitive then just push
             if (!isObject(target))
                 outputs.push(target);
-
             // Here Symbol.isConcatSpreadable support is added
             else if (typeof target[Symbol.isConcatSpreadable] !== "undefined") {
                 if (target[Symbol.isConcatSpreadable]) {
