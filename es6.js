@@ -39,8 +39,6 @@ var _global = testing ? exports : global;
 
     "use strict";
 
-    var ES6 = {};
-
     var defineProperty = Object.defineProperty;
 
     var defineProperties = Object.defineProperties;
@@ -49,12 +47,32 @@ var _global = testing ? exports : global;
 
     var globalSymbolRegistry = [];
 
-    var isObject = function (value) {
-        return value !== null
+    var isES6Running = function() {
+        return false; /* For testing purpose */
     };
 
-    var instanceOfOperator = function (object, constructor) {
+    var isObject = function (value) {
+        return value !== null && (typeof value === "object" || typeof value === "function");
+    };
 
+    var functionHasInstanceSymbol = function (instance) {
+        if (typeof this !== "function")
+            return false;
+        return instance instanceof this;
+    };
+
+    var instanceOf = function (object, constructor) {
+        if (!isObject(constructor))
+            throw new TypeError("Right-hand side of 'instanceof' is not an object");
+
+        var hasInstanceSymbolProp = constructor[Symbol.hasInstance];
+        if (typeof hasInstanceSymbolProp === "undefined") {
+            return object instanceof constructor;
+        } else if(typeof hasInstanceSymbolProp !== "function") {
+            throw new TypeError(typeof hasInstanceSymbolProp + " is not a function");
+        } else {
+            return hasInstanceSymbolProp.call(constructor, object);
+        }
     };
 
     // Generates name for a symbol instance and this name will be used as
@@ -87,8 +105,6 @@ var _global = testing ? exports : global;
         return symbol._isSymbol === true && typeof symbol._id === "number" && typeof symbol._description === "string";
     };
 
-    // Checks if a JS value is a symbol
-    // It can be used as equivalent api in ES6: typeof symbol === 'symbol'
     var isSymbol = function (symbol) {
         return symbol instanceof Symbol && checkSymbolInternals(symbol);
     };
@@ -171,13 +187,40 @@ var _global = testing ? exports : global;
         return this;
     };
 
-    ES6.isSymbol = isSymbol;
+    // Some ES6 API can't be implemented in pure ES5, so this ES6 object provides
+    // some equivalent functionality of these features.
+    var ES6 = {
 
-    if (typeof global.Symbol !== "function") {
-        global.Symbol = Symbol;
+        // Checks if a JS value is a symbol
+        // It can be used as equivalent api in ES6: typeof symbol === 'symbol'
+        isSymbol: isSymbol,
+
+        // Native ES5 'instanceof' operator does not support @@hasInstance symbol,
+        // this method provides same functionality of ES6 'instanceof' operator with
+        // @@hasInstance symbol
+        instanceOf: instanceOf
+    };
+
+    // Addition of all patches to support ES6 new APIs in ES5
+    // If the running environment already supports ES6 then no patches will applied,
+    // and exported ES6 object has no APIs, just a empty object
+    if (isES6Running())
+        return {};
+    else {
+        if (typeof global.Symbol !== "function") {
+            defineProperty(global, "Symbol", {
+                value: Symbol,
+                writable: true,
+                configurable: true
+            });
+        }
+
+        if (typeof Function.prototype[Symbol.hasInstance] !== "function") {
+            defineProperty(Function.prototype, Symbol.hasInstance.toString(), {
+                value: functionHasInstanceSymbol
+            });
+        }
     }
-
-
 
     return ES6;
 });
