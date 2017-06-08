@@ -55,7 +55,33 @@ var _global = testing ? exports : global;
 
     var isArray = Array.isArray;
 
+    var objectToString = Object.prototype.toString;
+
     var emptyFunction = function () {};
+
+    var Iterator = function () {};
+
+    var ArrayIterator = function (array, flag) {
+        this._array = array;
+        this._flag = flag;
+        this._nextIndex = 0;
+    };
+
+    var StringIterator = function (string, flag) {
+        this._string = string;
+        this._flag = flag;
+    };
+
+    var MapIterator = function (map, flag) {
+        this._map = map;
+        this._flag = flag;
+    };
+
+    var SetIterator = function (set, flag) {
+        this._set = set;
+        this._flag = flag;
+    };
+
 
     var isES6Running = function() {
         return false; /* Now for testing purpose */
@@ -168,6 +194,16 @@ var _global = testing ? exports : global;
                 array1[length1 + i] = array2[i];
     };
 
+    var es6ToString = function toString() {
+        if (this === undefined || this === null)
+            return objectToString.call(this);
+        // Add support for @@toStringTag symbol
+        if (typeof this[Symbol.toStringTag] === "string")
+            return "[object " + this[Symbol.toStringTag] + "]";
+        else
+            return objectToString.call(this);
+    };
+
     var es6ArrayConcat = function concat() {
         if (this === undefined || this === null)
             throw new TypeError("Array.prototype.concat called on null or undefined");
@@ -217,6 +253,14 @@ var _global = testing ? exports : global;
         }
     };
 
+    var simpleInheritance = function (child, parent) {
+        if (typeof child !== "function" || typeof parent !== "function")
+            throw new TypeError("Child and Parent must be function type");
+
+        child.prototype = Object.create(parent.prototype);
+        child.prototype.constructor = child;
+    };
+
     // Behaves as Symbol function in ES6, take description and returns an unique object,
     // but in ES6 this function returns 'symbol' primitive typed value.
     // Its type is 'object' not 'symbol'.
@@ -254,6 +298,10 @@ var _global = testing ? exports : global;
 
         "iterator": {
             value: Symbol("Symbol.iterator")
+        },
+
+        "toStringTag": {
+            value: Symbol("Symbol.toStringTag")
         }
 
     });
@@ -267,6 +315,87 @@ var _global = testing ? exports : global;
     // Returns itself but in ES6 It returns 'symbol' typed value.
     Symbol.prototype.valueOf = function () {
         return this;
+    };
+
+    defineProperty(Iterator.prototype, Symbol.iterator.toString(), {
+        value: function () {return this;},
+        writable: true,
+        configurable: true
+    });
+
+    simpleInheritance(ArrayIterator, Iterator);
+
+    simpleInheritance(StringIterator, Iterator);
+
+    simpleInheritance(MapIterator, Iterator);
+
+    simpleInheritance(SetIterator, Iterator);
+
+    defineProperty(ArrayIterator.prototype, Symbol.toStringTag.toString(), {
+        value: "Array Iterator",
+        configurable: true
+    });
+
+    defineProperty(StringIterator.prototype, Symbol.toStringTag.toString(), {
+        value: "String Iterator",
+        configurable: true
+    });
+
+    defineProperty(MapIterator.prototype, Symbol.toStringTag.toString(), {
+        value: "Map Iterator",
+        configurable: true
+    });
+
+    defineProperty(SetIterator.prototype, Symbol.toStringTag.toString(), {
+        value: "Set Iterator",
+        configurable: true
+    });
+
+    // Needs Reviews
+    ArrayIterator.prototype.next = function () {
+        if (!(this instanceof ArrayIterator))
+            throw new TypeError("Method Array Iterator.prototype.next called on incompatible receiver " + this);
+
+        var self = this,
+            nextValue;
+
+        if (self._nextIndex === -1)
+            return {done: true, value: undefined};
+
+        if (!(typeof self._array.length === "number" && self._array.length >= 0)) {
+            self._nextIndex = -1;
+            return {
+                done: true,
+                value: undefined
+            };
+        }
+
+        if (self._nextIndex < self._array) {
+            self._nextIndex++;
+            if (self._flag)
+                nextValue = [self._nextIndex - 1, self._array[self._nextIndex - 1]];
+            else
+                nextValue = self._array[self._nextIndex - 1];
+            return {
+                done: false,
+                value: nextValue
+            };
+        } else {
+            self._nextIndex = -1;
+            return {
+                done: true,
+                value: undefined
+            };
+        }
+    };
+
+    // Needs Reviews
+    var arrayIteratorSymbol = function () {
+        if (this === undefined || this === null)
+            throw new TypeError("TypeError: Cannot convert undefined or null to object");
+
+        var self = Object(this);
+        return new ArrayIterator(self, 0);
     };
 
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
@@ -306,7 +435,14 @@ var _global = testing ? exports : global;
             writable: true,
             configurable: true
         });
+
+        defineProperty(Object.prototype, "toString", {
+            value: es6ToString,
+            writable: true,
+            configurable: true
+        });
     }
+
 
     return ES6;
 });
