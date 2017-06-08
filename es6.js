@@ -152,17 +152,31 @@ var _global = testing ? exports : global;
         }
     };
 
-    var es6ArrayConcat = function () {
+    // It affects array1 and appends array2 after array1
+    var appendArray = function (array1, array2) {
+        // Returns if these are not array or array-like objects
+        if (!(typeof array1.length === "number" && array1.length >= 0 && typeof array2.length === "number" && array2.length >= 0))
+            return;
+        var length1 = Math.floor(array1.length),
+            length2 = Math.floor(array2.length),
+            i = 0;
+
+        array1.length = length1 + length2;
+        for (; i<length2; ++i)
+            if (array2.hasOwnProperty(i))
+                array1[length1 + i] = array2[i];
+    };
+
+    var es6ArrayConcat = function concat() {
         if (this === undefined || this === null)
             throw new TypeError("Array.prototype.concat called on null or undefined");
 
         //Boxing 'this' value to wrapper object
         var self = Object(this),
-            targets = slice.call(arguments).unshift(self),
-            targetLength,
-            outputsLength,
-            i,
+            targets = slice.call(arguments),
             outputs = [];
+
+        targets.unshift(self);
 
         targets.forEach(function (target) {
             // If target is primitive then just push
@@ -170,23 +184,14 @@ var _global = testing ? exports : global;
                 outputs.push(target);
 
             // Here Symbol.isConcatSpreadable support is added
-            else if (target[Symbol.isConcatSpreadable]) {
-                // ignore if target.length is not a number or a negative number
-                if (typeof target.length === "number" && target.length >= 0) {
-
-                    // If target.length is a floating number
-                    targetLength = Math.floor(target.length);
-                    outputsLength = outputs.length;
-                    outputs.length = targetLength + outputsLength;
-
-                    for (i = 0; i < targetLength; ++i) {
-                        // Add iff i is a property of target otherwise, ignores
-                        if (target.hasOwnProperty(i))
-                            outputs[outputsLength + i] = target[i];
-                    }
+            else if (typeof target[Symbol.isConcatSpreadable] !== "undefined") {
+                if (target[Symbol.isConcatSpreadable]) {
+                    appendArray(outputs, target);
+                } else {
+                    outputs.push(target);
                 }
             } else if (isArray(target)) {
-                outputs = arrayConcat.call(outputs, target);
+                appendArray(outputs, target);
             } else {
                 outputs.push(target);
             }
@@ -269,6 +274,12 @@ var _global = testing ? exports : global;
 
         defineProperty(Function.prototype, Symbol.hasInstance.toString(), {
             value: functionHasInstanceSymbol
+        });
+
+        defineProperty(Array.prototype, "concat", {
+            value: es6ArrayConcat,
+            writable: true,
+            configurable: true
         });
     }
 
