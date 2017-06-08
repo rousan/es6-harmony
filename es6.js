@@ -31,7 +31,10 @@ var _global = testing ? exports : global;
 
         // For browser context, where global object is window
         // and the ES6 APIs is exported as 'ES6' property in window object.
-        global["ES6"] = factory(global);
+        // If 'ES6' property already exists then scripts returns immediately,
+        // it ensures that script will be executed once per environment
+        if (typeof global["ES6"] !== "object")
+            global["ES6"] = factory(global);
     }
 
     /* window is for browser environment and global is for NodeJS environment */
@@ -47,8 +50,14 @@ var _global = testing ? exports : global;
 
     var globalSymbolRegistry = [];
 
+    var arrayConcat = Array.prototype.concat;
+
+    var slice = Array.prototype.slice;
+
+    var isArray = Array.isArray;
+
     var isES6Running = function() {
-        return false; /* For testing purpose */
+        return false; /* Now for testing purpose */
     };
 
     var isObject = function (value) {
@@ -143,8 +152,50 @@ var _global = testing ? exports : global;
         }
     };
 
+    var es6ArrayConcat = function () {
+        if (this === undefined || this === null)
+            throw new TypeError("Array.prototype.concat called on null or undefined");
+
+        //Boxing 'this' value to wrapper object
+        var self = Object(this),
+            targets = slice.call(arguments).unshift(self),
+            targetLength,
+            outputsLength,
+            i,
+            outputs = [];
+
+        targets.forEach(function (target) {
+            // If target is primitive then just push
+            if (!isObject(target))
+                outputs.push(target);
+
+            // Here Symbol.isConcatSpreadable support is added
+            else if (target[Symbol.isConcatSpreadable]) {
+                // ignore if target.length is not a number or a negative number
+                if (typeof target.length === "number" && target.length >= 0) {
+
+                    // If target.length is a floating number
+                    targetLength = Math.floor(target.length);
+                    outputsLength = outputs.length;
+                    outputs.length = targetLength + outputsLength;
+
+                    for (i = 0; i < targetLength; ++i) {
+                        // Add iff i is a property of target otherwise, ignores
+                        if (target.hasOwnProperty(i))
+                            outputs[outputsLength + i] = target[i];
+                    }
+                }
+            } else if (isArray(target)) {
+                outputs = arrayConcat.call(outputs, target);
+            } else {
+                outputs.push(target);
+            }
+        });
+        return outputs;
+    };
+
     // Behaves as Symbol function in ES6, take description and returns an unique object,
-    // but in ES6 this function returns Symbol typed primitive value.
+    // but in ES6 this function returns 'symbol' primitive typed value.
     // Its type is 'object' not 'symbol'.
     // There is no wrapping in this case i.e. Object(sym) = sym.
     var Symbol = function Symbol(desc) {
@@ -172,6 +223,10 @@ var _global = testing ? exports : global;
 
         "hasInstance": {
             value: Symbol("Symbol.hasInstance")
+        },
+
+        "isConcatSpreadable": {
+            value: Symbol("Symbol.isConcatSpreadable")
         }
 
     });
@@ -187,7 +242,7 @@ var _global = testing ? exports : global;
         return this;
     };
 
-    // Some ES6 API can't be implemented in pure ES5, so this ES6 object provides
+    // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
     var ES6 = {
 
@@ -196,30 +251,25 @@ var _global = testing ? exports : global;
         isSymbol: isSymbol,
 
         // Native ES5 'instanceof' operator does not support @@hasInstance symbol,
-        // this method provides same functionality of ES6 'instanceof' operator with
-        // @@hasInstance symbol
+        // this method provides same functionality of ES6 'instanceof' operator.
         instanceOf: instanceOf
     };
 
-    // Addition of all patches to support ES6 new APIs in ES5
+    // Addition of all the patches to support ES6 in ES5
     // If the running environment already supports ES6 then no patches will applied,
-    // and exported ES6 object has no APIs, just a empty object
+    // just an empty object will be exported as 'ES6'.
     if (isES6Running())
         return {};
     else {
-        if (typeof global.Symbol !== "function") {
-            defineProperty(global, "Symbol", {
-                value: Symbol,
-                writable: true,
-                configurable: true
-            });
-        }
+        defineProperty(global, "Symbol", {
+            value: Symbol,
+            writable: true,
+            configurable: true
+        });
 
-        if (typeof Function.prototype[Symbol.hasInstance] !== "function") {
-            defineProperty(Function.prototype, Symbol.hasInstance.toString(), {
-                value: functionHasInstanceSymbol
-            });
-        }
+        defineProperty(Function.prototype, Symbol.hasInstance.toString(), {
+            value: functionHasInstanceSymbol
+        });
     }
 
     return ES6;
