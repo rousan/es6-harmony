@@ -55,6 +55,8 @@ var _global = testing ? exports : global;
 
     var isArray = Array.isArray;
 
+    var emptyFunction = function () {};
+
     var isES6Running = function() {
         return false; /* Now for testing purpose */
     };
@@ -197,6 +199,24 @@ var _global = testing ? exports : global;
         return outputs;
     };
 
+    var forOfLoop = function (iterable, callback, thisArg) {
+        callback = typeof callback !== "function" ? emptyFunction : callback;
+        if (typeof iterable[Symbol.iterator] !== "function")
+            throw new TypeError("Iterable[Symbol.iterator] is not a function");
+        var iterator = iterable[Symbol.iterator](),
+            iterationResult;
+        if (typeof iterator.next !== "function")
+            throw new TypeError(".iterator.next is not a function");
+        while (true) {
+            iterationResult = iterator.next();
+            if (!isObject(iterationResult))
+                throw new TypeError("Iterator result " + iterationResult + " is not an object");
+            if (iterationResult.done)
+                break;
+            callback.call(thisArg, iterationResult.value);
+        }
+    };
+
     // Behaves as Symbol function in ES6, take description and returns an unique object,
     // but in ES6 this function returns 'symbol' primitive typed value.
     // Its type is 'object' not 'symbol'.
@@ -230,6 +250,10 @@ var _global = testing ? exports : global;
 
         "isConcatSpreadable": {
             value: Symbol("Symbol.isConcatSpreadable")
+        },
+
+        "iterator": {
+            value: Symbol("Symbol.iterator")
         }
 
     });
@@ -255,7 +279,10 @@ var _global = testing ? exports : global;
 
         // Native ES5 'instanceof' operator does not support @@hasInstance symbol,
         // this method provides same functionality of ES6 'instanceof' operator.
-        instanceOf: instanceOf
+        instanceOf: instanceOf,
+
+        // This method behaves exactly same as ES6 for...of loop.
+        forOf: forOfLoop
     };
 
     // Addition of all the patches to support ES6 in ES5
