@@ -57,6 +57,10 @@ var _global = testing ? exports : global;
 
     var objectToString = Object.prototype.toString;
 
+    var push = Array.prototype.push;
+
+    var match = String.prototype.match;
+
     var emptyFunction = function () {};
 
     var Iterator = function () {};
@@ -83,9 +87,8 @@ var _global = testing ? exports : global;
         this._flag = flag;
     };
 
-
     var isES6Running = function() {
-        return false; /* Now for testing purpose */
+        return false; /* Now 'false' for testing purpose */
     };
 
     var isObject = function (value) {
@@ -304,6 +307,10 @@ var _global = testing ? exports : global;
 
         "toStringTag": {
             value: Symbol("Symbol.toStringTag")
+        },
+
+        "match": {
+            value: Symbol("Symbol.match")
         }
 
     });
@@ -449,6 +456,82 @@ var _global = testing ? exports : global;
         return new ArrayIterator(self, 1);
     };
 
+    var SpreadOperatorImpl = function (target, thisArg) {
+        this._target = target;
+        this._values = [];
+        this._thisArg = thisArg;
+    };
+
+    // All the arguments must be iterable
+    SpreadOperatorImpl.prototype.spread = function () {
+        var self = this;
+        slice.call(arguments).forEach(function (iterable) {
+            ES6.forOf(iterable, function (value) {
+                self._values.push(value);
+            });
+        });
+        return self;
+    };
+
+    SpreadOperatorImpl.prototype.add = function () {
+        var self = this;
+        slice.call(arguments).forEach(function (value) {
+            self._values.push(value);
+        });
+        return self;
+    };
+
+    SpreadOperatorImpl.prototype.call = function (thisArg) {
+        if (typeof this._target !== "function")
+            throw new TypeError("Target is not a function");
+        thisArg = arguments.length <= 0 ? this._thisArg : thisArg;
+        return this._target.apply(thisArg, this._values);
+    };
+
+    SpreadOperatorImpl.prototype.new = function () {
+        if (typeof this._target !== "function")
+            throw new TypeError("Target is not a constructor");
+
+        var temp,
+            returnValue;
+        temp = Object.create(this._target.prototype);
+        returnValue = this._target.apply(temp, this._values);
+        return isObject(returnValue) ? returnValue : temp;
+    };
+
+    // Affects the target array
+    SpreadOperatorImpl.prototype.array = function () {
+        if (!isArray(this._target))
+            throw new TypeError("Target is not a array");
+        push.apply(this._target, this._values);
+        return this._target;
+    };
+
+    // Target must be Array or function
+    var es6SpreadOperator = function spreadOperator(target, thisArg) {
+        if (!(typeof target === "function" || isArray(target)))
+            throw new TypeError("Spread operator only supports on array and function objects at this moment");
+        return new SpreadOperatorImpl(target, thisArg);
+    };
+
+    var es6Match = function (regexp) {
+        if (this === undefined || this === null)
+            throw new TypeError("String.prototype.match called on null or undefined");
+        if (regexp === undefined || regexp === null)
+            return match.call(this, new RegExp(regexp));
+        regexp = Object(regexp);
+        var matchSymbol = regexp[Symbol.match];
+        if (typeof matchSymbol !== "undefined") {
+            if (typeof matchSymbol !== "function")
+                throw new TypeError(typeof matchSymbol + " is not a function");
+            else {
+                return matchSymbol.call(regexp, this);
+            }
+        } else {
+            return match.call(this, new RegExp(String(regexp)));
+        }
+    };
+
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
     var ES6 = {
@@ -462,7 +545,13 @@ var _global = testing ? exports : global;
         instanceOf: instanceOf,
 
         // This method behaves exactly same as ES6 for...of loop.
-        forOf: forOfLoop
+        forOf: forOfLoop,
+
+        // This method gives same functionality of the spread operator of ES6
+        // It works on only functions and arrays.
+        // Limitation: You can't create array like this [...iterable, , , , 33] by this method,
+        // to achieve this you have to do like this [...iterable, undefined, undefined, undefined, 33]
+        spreadOperator: es6SpreadOperator
     };
 
     // Addition of all the patches to support ES6 in ES5
