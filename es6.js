@@ -61,23 +61,24 @@ var _global = testing ? exports : global;
 
     var Iterator = function () {};
 
-    var ArrayIterator = function (array, flag) {
+    var ArrayIterator = function ArrayIterator(array, flag) {
         this._array = array;
         this._flag = flag;
         this._nextIndex = 0;
     };
 
-    var StringIterator = function (string, flag) {
+    var StringIterator = function StringIterator(string, flag) {
         this._string = string;
         this._flag = flag;
+        this._nextIndex = 0;
     };
 
-    var MapIterator = function (map, flag) {
+    var MapIterator = function MapIterator(map, flag) {
         this._map = map;
         this._flag = flag;
     };
 
-    var SetIterator = function (set, flag) {
+    var SetIterator = function SetIterator(set, flag) {
         this._set = set;
         this._flag = flag;
     };
@@ -253,6 +254,7 @@ var _global = testing ? exports : global;
         }
     };
 
+    // Provides simple inheritance functionality
     var simpleInheritance = function (child, parent) {
         if (typeof child !== "function" || typeof parent !== "function")
             throw new TypeError("Child and Parent must be function type");
@@ -317,6 +319,7 @@ var _global = testing ? exports : global;
         return this;
     };
 
+    // Make Iterator like iterable
     defineProperty(Iterator.prototype, Symbol.iterator.toString(), {
         value: function () {return this;},
         writable: true,
@@ -351,16 +354,20 @@ var _global = testing ? exports : global;
         configurable: true
     });
 
-    // Needs Reviews
-    ArrayIterator.prototype.next = function () {
+    // This iterator works on any Array or TypedArray or array-like objects
+    ArrayIterator.prototype.next = function next() {
         if (!(this instanceof ArrayIterator))
-            throw new TypeError("Method Array Iterator.prototype.next called on incompatible receiver " + this);
+            throw new TypeError("Method Array Iterator.prototype.next called on incompatible receiver " + String(this));
 
         var self = this,
             nextValue;
 
-        if (self._nextIndex === -1)
-            return {done: true, value: undefined};
+        if (self._nextIndex === -1) {
+            return {
+                done: true,
+                value: undefined
+            };
+        }
 
         if (!(typeof self._array.length === "number" && self._array.length >= 0)) {
             self._nextIndex = -1;
@@ -370,12 +377,12 @@ var _global = testing ? exports : global;
             };
         }
 
-        if (self._nextIndex < self._array) {
-            self._nextIndex++;
+        if (self._nextIndex < Math.floor(self._array.length)) {
             if (self._flag)
-                nextValue = [self._nextIndex - 1, self._array[self._nextIndex - 1]];
+                nextValue = [self._nextIndex, self._array[self._nextIndex]];
             else
-                nextValue = self._array[self._nextIndex - 1];
+                nextValue = self._array[self._nextIndex];
+            self._nextIndex++;
             return {
                 done: false,
                 value: nextValue
@@ -389,13 +396,57 @@ var _global = testing ? exports : global;
         }
     };
 
-    // Needs Reviews
-    var arrayIteratorSymbol = function () {
+    StringIterator.prototype.next = function next() {
+        if (!(this instanceof StringIterator))
+            throw new TypeError("Method String Iterator.prototype.next called on incompatible receiver " + String(this));
+
+        var self = this,
+            stringObject = new String(this._string),
+            nextValue;
+
+        if (self._nextIndex === -1) {
+            return {
+                done: true,
+                value: undefined
+            };
+        }
+
+        if (self._nextIndex < stringObject.length) {
+            nextValue = stringObject[self._nextIndex];
+            self._nextIndex++;
+            return {
+                done: false,
+                value: nextValue
+            };
+        } else {
+            self._nextIndex = -1;
+            return {
+                done: true,
+                value: undefined
+            };
+        }
+    };
+
+    var arrayIteratorSymbol = function values() {
         if (this === undefined || this === null)
-            throw new TypeError("TypeError: Cannot convert undefined or null to object");
+            throw new TypeError("Cannot convert undefined or null to object");
 
         var self = Object(this);
         return new ArrayIterator(self, 0);
+    };
+
+    var stringIteratorSymbol = function values() {
+        if (this === undefined || this === null)
+            throw new TypeError("String.prototype[Symbol.iterator] called on null or undefined");
+        return new StringIterator(String(this), 0);
+    };
+
+    var arrayEntries = function entries() {
+        if (this === undefined || this === null)
+            throw new TypeError("Cannot convert undefined or null to object");
+
+        var self = Object(this);
+        return new ArrayIterator(self, 1);
     };
 
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
@@ -415,7 +466,7 @@ var _global = testing ? exports : global;
     };
 
     // Addition of all the patches to support ES6 in ES5
-    // If the running environment already supports ES6 then no patches will applied,
+    // If the running environment already supports ES6 then no patches will be applied,
     // just an empty object will be exported as 'ES6'.
     if (isES6Running())
         return {};
@@ -438,6 +489,24 @@ var _global = testing ? exports : global;
 
         defineProperty(Object.prototype, "toString", {
             value: es6ToString,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, Symbol.iterator.toString(), {
+            value: arrayIteratorSymbol,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "entries", {
+            value: arrayEntries,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(String.prototype, Symbol.iterator.toString(), {
+            value: stringIteratorSymbol,
             writable: true,
             configurable: true
         });
