@@ -59,6 +59,10 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
     var match = String.prototype.match;
 
+    var max = Math.max;
+
+    var min = Math.min;
+
     var emptyFunction = function () {};
 
     var simpleFunction = function (arg) {
@@ -105,13 +109,13 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return value !== null && (typeof value === "object" || typeof value === "function");
     };
 
-    var functionHasInstanceSymbol = function (instance) {
+    var es6FunctionPrototypeHasInstanceSymbol = function (instance) {
         if (typeof this !== "function")
             return false;
         return instance instanceof this;
     };
 
-    var instanceOf = function (object, constructor) {
+    var es6InstanceOfOperator = function (object, constructor) {
         if (!isObject(constructor))
             throw new TypeError("Right-hand side of 'instanceof' is not an object");
 
@@ -208,7 +212,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
                 array1[length1 + i] = array2[i];
     };
 
-    var es6ToString = function toString() {
+    var es6ObjectPrototypeToString = function toString() {
         if (this === undefined || this === null)
             return objectToString.call(this);
         // Add support for @@toStringTag symbol
@@ -218,7 +222,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             return objectToString.call(this);
     };
 
-    var es6ArrayConcat = function concat() {
+    var es6ArrayPrototypeConcat = function concat() {
         if (this === undefined || this === null)
             throw new TypeError("Array.prototype.concat called on null or undefined");
 
@@ -249,7 +253,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return outputs;
     };
 
-    var forOfLoop = function (iterable, callback, thisArg) {
+    var es6ForOfLoop = function (iterable, callback, thisArg) {
         callback = typeof callback !== "function" ? emptyFunction : callback;
         if (typeof iterable[Symbol.iterator] !== "function")
             throw new TypeError("Iterable[Symbol.iterator] is not a function");
@@ -389,11 +393,16 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             };
         }
 
+        // _flag = 1 for [index, value]
+        // _flag = 2 for [value]
+        // _flag = 3 for [index]
         if (self._nextIndex < Math.floor(self._array.length)) {
-            if (self._flag)
+            if (self._flag === 1)
                 nextValue = [self._nextIndex, self._array[self._nextIndex]];
-            else
+            else if (self._flag === 2)
                 nextValue = self._array[self._nextIndex];
+            else if (self._flag === 3)
+                nextValue = self._nextIndex;
             self._nextIndex++;
             return {
                 done: false,
@@ -439,26 +448,33 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         }
     };
 
-    var arrayIteratorSymbol = function values() {
+    var es6ArrayPrototypeIteratorSymbol = function values() {
         if (this === undefined || this === null)
             throw new TypeError("Cannot convert undefined or null to object");
 
         var self = Object(this);
-        return new ArrayIterator(self, 0);
+        return new ArrayIterator(self, 2);
     };
 
-    var stringIteratorSymbol = function values() {
+    var es6StringPrototypeIteratorSymbol = function values() {
         if (this === undefined || this === null)
             throw new TypeError("String.prototype[Symbol.iterator] called on null or undefined");
         return new StringIterator(String(this), 0);
     };
 
-    var arrayEntries = function entries() {
+    var es6ArrayPrototypeEntries = function entries() {
         if (this === undefined || this === null)
             throw new TypeError("Cannot convert undefined or null to object");
 
         var self = Object(this);
         return new ArrayIterator(self, 1);
+    };
+
+    var es6ArrayPrototypeKeys = function keys() {
+        if (this === undefined || this === null)
+            throw new TypeError("Cannot convert undefined or null to object");
+        var self = Object(this);
+        return new ArrayIterator(self, 3);
     };
 
     var SpreadOperatorImpl = function (target, thisArg) {
@@ -615,6 +631,79 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return self;
     };
 
+    var es6ArrayPrototypeFind = function find(callback, thisArg) {
+        if (this === undefined || this === null)
+            throw new TypeError("Array.prototype.find called on null or undefined");
+        if (!isCallable(callback))
+            throw new TypeError(callback + " is not a function");
+        var self = Object(this),
+            i = 0,
+            length;
+        if (typeof self.length === "number" && self.length >= 0) {
+            length = Math.floor(self.length);
+            for (; i < length; ++i) {
+                if (callback.call(thisArg, self[i], i, self))
+                    return self[i];
+            }
+        }
+    };
+
+    var es6ArrayPrototypeFindIndex = function findIndex(callback, thisArg) {
+        if (this === undefined || this === null)
+            throw new TypeError("Array.prototype.findIndex called on null or undefined");
+        if (!isCallable(callback))
+            throw new TypeError(callback + " is not a function");
+        var self = Object(this),
+            i = 0,
+            length;
+        if (typeof self.length === "number" && self.length >= 0) {
+            length = Math.floor(self.length);
+            for (; i < length; ++i) {
+                if (callback.call(thisArg, self[i], i, self))
+                    return i;
+            }
+        }
+        return -1;
+    };
+
+    var es6ArrayPrototypeCopyWithin = function copyWithin(target, start) {
+        if (this == undefined || this === null) {
+            throw new TypeError("Array.prototype.copyWithin called on null or undefined");
+        }
+
+        var self = Object(this),
+            length = self.length >>> 0,
+            relativeTarget = target >> 0,
+            to = relativeTarget < 0 ? max(length + relativeTarget, 0) : min(relativeTarget, length),
+            relativeStart = start >> 0,
+            from = relativeStart < 0 ? max(length + relativeStart, 0) : min(relativeStart, length),
+            end = arguments[2],
+            relativeEnd = end === undefined ? length : end >> 0,
+            final = relativeEnd < 0 ? max(length + relativeEnd, 0) : min(relativeEnd, length),
+            count = min(final - from, length - to),
+            direction = 1;
+
+        if (from < to && to < (from + count)) {
+            direction = -1;
+            from += count - 1;
+            to += count - 1;
+        }
+
+        while (count > 0) {
+            if (from in self) {
+                self[to] = self[from];
+            } else {
+                delete self[to];
+            }
+
+            from += direction;
+            to += direction;
+            count--;
+        }
+
+        return self;
+    };
+
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
     var ES6 = {
@@ -625,10 +714,10 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
         // Native ES5 'instanceof' operator does not support @@hasInstance symbol,
         // this method provides same functionality of ES6 'instanceof' operator.
-        instanceOf: instanceOf,
+        instanceOf: es6InstanceOfOperator,
 
         // This method behaves exactly same as ES6 for...of loop.
-        forOf: forOfLoop,
+        forOf: es6ForOfLoop,
 
         // This method gives same functionality of the spread operator of ES6
         // It works on only functions and arrays.
@@ -650,35 +739,41 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         });
 
         defineProperty(Function.prototype, Symbol.hasInstance.toString(), {
-            value: functionHasInstanceSymbol
+            value: es6FunctionPrototypeHasInstanceSymbol
         });
 
         defineProperty(Array.prototype, "concat", {
-            value: es6ArrayConcat,
+            value: es6ArrayPrototypeConcat,
             writable: true,
             configurable: true
         });
 
         defineProperty(Object.prototype, "toString", {
-            value: es6ToString,
+            value: es6ObjectPrototypeToString,
             writable: true,
             configurable: true
         });
 
         defineProperty(Array.prototype, Symbol.iterator.toString(), {
-            value: arrayIteratorSymbol,
+            value: es6ArrayPrototypeIteratorSymbol,
             writable: true,
             configurable: true
         });
 
         defineProperty(Array.prototype, "entries", {
-            value: arrayEntries,
+            value: es6ArrayPrototypeEntries,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "keys", {
+            value: es6ArrayPrototypeKeys,
             writable: true,
             configurable: true
         });
 
         defineProperty(String.prototype, Symbol.iterator.toString(), {
-            value: stringIteratorSymbol,
+            value: es6StringPrototypeIteratorSymbol,
             writable: true,
             configurable: true
         });
@@ -697,6 +792,24 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
         defineProperty(Array.prototype, "fill", {
             value: es6ArrayPrototypeFill,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "find", {
+            value: es6ArrayPrototypeFind,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "findIndex", {
+            value: es6ArrayPrototypeFindIndex,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "copyWithin", {
+            value: es6ArrayPrototypeCopyWithin,
             writable: true,
             configurable: true
         });
