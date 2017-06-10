@@ -34,8 +34,8 @@ var _global = testing ? exports : global;
         // and the ES6 APIs is exported as 'ES6' property in window object.
         // If 'ES6' property already exists then scripts returns immediately,
         // it ensures that script will be executed once per environment
-        if (typeof global["ES6"] !== "object")
-            global["ES6"] = factory(global);
+        if (typeof global.ES6 !== "object")
+            global.ES6 = factory(global);
     }
 
     /* window is for browser environment and global is for NodeJS environment */
@@ -62,6 +62,18 @@ var _global = testing ? exports : global;
     var match = String.prototype.match;
 
     var emptyFunction = function () {};
+
+    var simpleFunction = function (arg) {
+        return arg;
+    };
+
+    var isCallable = function (fn) {
+        return typeof fn === 'function';
+    };
+
+    var isConstructor = function (fn) {
+        return isCallable(fn);
+    };
 
     var Iterator = function () {};
 
@@ -307,12 +319,7 @@ var _global = testing ? exports : global;
 
         "toStringTag": {
             value: Symbol("Symbol.toStringTag")
-        },
-
-        "match": {
-            value: Symbol("Symbol.match")
         }
-
     });
 
     // In ES6, this function returns like 'Symbol(<desc>)', but in this case
@@ -514,6 +521,7 @@ var _global = testing ? exports : global;
         return new SpreadOperatorImpl(target, thisArg);
     };
 
+    /*
     var es6Match = function (regexp) {
         if (this === undefined || this === null)
             throw new TypeError("String.prototype.match called on null or undefined");
@@ -530,6 +538,45 @@ var _global = testing ? exports : global;
         } else {
             return match.call(this, new RegExp(String(regexp)));
         }
+    };
+    */
+
+    var es6ArrayFrom = function from(arrayLike, mapFn, thisArg) {
+        var constructor,
+            i = 0,
+            length,
+            outputs;
+        // Use the generic constructor
+        constructor = !isConstructor(this) ? Array : this;
+        if (arrayLike === undefined || arrayLike === null)
+            throw new TypeError("Cannot convert undefined or null to object");
+
+        arrayLike = Object(arrayLike);
+        if (mapFn === undefined)
+            mapFn = simpleFunction;
+        else if (!isCallable(mapFn))
+            throw new TypeError(mapFn + " is not a function");
+
+        if (typeof arrayLike[Symbol.iterator] === "undefined") {
+            if (!(typeof arrayLike.length === "number" && arrayLike.length >= 0)) {
+                outputs = new constructor(0);
+                outputs.length = 0;
+                return outputs;
+            }
+            length = Math.floor(arrayLike.length);
+            outputs = new constructor(length);
+            outputs.length = length;
+            for(; i < length; ++i)
+                outputs[i] = mapFn.call(thisArg, arrayLike[i]);
+        } else {
+            outputs = new constructor();
+            outputs.length = 0;
+            ES6.forOf(arrayLike, function (value) {
+                outputs.length++;
+                outputs[outputs.length - 1] = mapFn.call(thisArg, value);
+            });
+        }
+        return outputs;
     };
 
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
@@ -599,8 +646,14 @@ var _global = testing ? exports : global;
             writable: true,
             configurable: true
         });
-    }
 
+
+        defineProperty(Array, "from", {
+            value: es6ArrayFrom,
+            writable: true,
+            configurable: true
+        });
+    }
 
     return ES6;
 });
