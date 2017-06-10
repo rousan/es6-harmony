@@ -3,18 +3,16 @@
  * This module provides an approximate equivalent implementation of ES6(Harmony)'s
  * new features in pure ES5 for backward compatibility. This API has no dependencies.
  *
- * WARNING: This implementation is tested only on firefox browser.
- *
  * @license Copyright (c) 2017 Ariyan Khan, MIT License
  *
  * Codebase: https://github.com/ariyankhan/es6
- * Date: Jun 8, 2017
+ * Date: Jun 10, 2017
  */
 
 
+var isBrowser = false;
 var testing = true;
-var _global = testing ? exports : global;
-
+var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : global);
 
 (function (global, factory) {
 
@@ -34,7 +32,7 @@ var _global = testing ? exports : global;
         // and the ES6 APIs is exported as 'ES6' property in window object.
         // If 'ES6' property already exists then scripts returns immediately,
         // it ensures that script will be executed once per environment
-        if (typeof global.ES6 !== "object")
+        if (global.ES6 === null || typeof global.ES6 !== "object")
             global.ES6 = factory(global);
     }
 
@@ -579,6 +577,44 @@ var _global = testing ? exports : global;
         return outputs;
     };
 
+    var es6ArrayOf = function of() {
+        var constructor,
+            outputs,
+            length,
+            i = 0;
+        // Use the generic constructor
+        constructor = !isConstructor(this) ? Array : this;
+        length = arguments.length;
+        outputs = new constructor(length);
+        outputs.length = length;
+        for(; i < length; ++i) {
+            outputs[i] = arguments[i];
+        }
+        return outputs;
+    };
+
+    var es6ArrayPrototypeFill = function fill(value, start, end) {
+        if (this === undefined || this === null)
+            throw new TypeError("Array.prototype.fill called on null or undefined");
+
+        var self = Object(this),
+            i = 0,
+            length;
+        if (typeof self.length === "number" && self.length >= 0) {
+            length = Math.floor(self.length);
+            start = start === undefined ? 0 : Math.floor(Number(start));
+            end = end === undefined ? length : Math.floor(Number(end));
+            start = start < 0 ? start + length : start;
+            end = end < 0 ? end + length : end;
+            start = start < 0 ? 0 : start;
+            end = end > length ? length : end;
+
+            for(i = start; i < end; ++i)
+                self[i] = value;
+        }
+        return self;
+    };
+
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
     var ES6 = {
@@ -647,9 +683,20 @@ var _global = testing ? exports : global;
             configurable: true
         });
 
-
         defineProperty(Array, "from", {
             value: es6ArrayFrom,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array, "of", {
+            value: es6ArrayOf,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "fill", {
+            value: es6ArrayPrototypeFill,
             writable: true,
             configurable: true
         });
