@@ -821,7 +821,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
     };
 
     // WARNING: This method puts a link in the key object to reduce time complexity to O(1).
-    // So, after map.set(key) call, if the linker property of the key object is deleted
+    // So, after map.set(key, value) call, if the linker property of the key object is deleted
     // then map.has(key) will returns false.
     // Time complexity: O(1) for all cases(there is no worst case, same for both primitive and object key).
     // Space complexity is O(n) for all cases.
@@ -1331,6 +1331,176 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return set instanceof Set && checkSetInternals(set);
     };
 
+    var WeakMap = function WeakMap(iterable) {
+        if (!(this instanceof WeakMap) || isWeakMap(this))
+            throw new TypeError("Constructor WeakMap requires 'new'");
+        setupWeakMapInternals(this);
+
+        if (iterable !== null && iterable !== undefined) {
+            ES6.forOf(iterable, function (entry) {
+                if (!isObject(entry))
+                    throw new TypeError("Iterator value " + entry + " is not an entry object");
+                this.set(entry[0], entry[1]);
+            }, this);
+        }
+    };
+
+    var setupWeakMapInternals = function (weakMap) {
+        defineProperties(weakMap, {
+            _isWeakMap: {
+                value: true
+            },
+            _objectHash: {
+                value: Symbol("Hash(weakmap)")
+            },
+            _values: {
+                value: []
+            }
+        });
+    };
+
+    defineProperty(WeakMap.prototype, Symbol.toStringTag.toString(), {
+        value: "WeakMap",
+        configurable: true
+    });
+
+    var checkWeakMapInternals = function (weakMap) {
+        return weakMap._isWeakMap === true
+            && ES6.isSymbol(weakMap._objectHash)
+            && isArray(weakMap._values);
+    };
+
+    var isWeakMap = function (weakMap) {
+        return weakMap instanceof WeakMap && checkWeakMapInternals(weakMap);
+    };
+
+    // WARNING: This method puts a link in the key object to reduce time complexity to O(1).
+    // So, after weakMap.set(key, value) call, if the linker property of the key object is deleted
+    // then weakMap.has(key) will return false.
+    // Time complexity: O(1) for all cases(there is no worst case)
+    // Space complexity is O(n) for all cases.
+    WeakMap.prototype.set = function set(key, value) {
+        if (!isWeakMap(this))
+            throw new TypeError("Method WeakMap.prototype.set called on incompatible receiver " + this);
+        // No symbol is allowed in WeakMap as key
+        if (!isObject(key) || ES6.isSymbol(key))
+            throw new TypeError("Invalid value used as weak map key");
+        var objectHash = this._objectHash;
+        if (typeof key[objectHash] === "number" && this._values.hasOwnProperty(key[objectHash])) {
+            this._values[key[objectHash]] = value;
+        } else {
+            this._values.push(value);
+            defineProperty(key, objectHash.toString(), {
+                value: this._values.length - 1,
+                configurable: true
+            });
+        }
+        return this;
+    };
+
+
+    // Time complexity: O(1) for all cases(there is no worst case)
+    // Space complexity is O(1)
+    WeakMap.prototype.get = function get(key) {
+        if (!isWeakMap(this))
+            throw new TypeError("Method WeakMap.prototype.get called on incompatible receiver " + this);
+        if (!isObject(key) || ES6.isSymbol(key))
+            return;
+        var objectHash = this._objectHash;
+        if (typeof key[objectHash] === "number" && this._values.hasOwnProperty(key[objectHash]))
+            return this._values[key[objectHash]];
+    };
+
+    // Time complexity: O(1) for all cases(there is no worst case)
+    // Space complexity is O(1)
+    WeakMap.prototype.has = function has(key) {
+        if (!isWeakMap(this))
+            throw new TypeError("Method WeakMap.prototype.has called on incompatible receiver " + this);
+        if (!isObject(key) || ES6.isSymbol(key))
+            return false;
+        var objectHash = this._objectHash;
+        return typeof key[objectHash] === "number" && this._values.hasOwnProperty(key[objectHash]);
+    };
+
+    // Time complexity: O(1) for all cases(there is no worst case)
+    // Space complexity is O(1)
+    WeakMap.prototype.delete = function (key) {
+        if (!isWeakMap(this))
+            throw new TypeError("Method WeakMap.prototype.delete called on incompatible receiver " + this);
+        if (!isObject(key) || ES6.isSymbol(key))
+            return false;
+        var objectHash = this._objectHash;
+        if (typeof key[objectHash] === "number" && this._values.hasOwnProperty(key[objectHash])) {
+            delete this._values[key[objectHash]];
+            delete key[objectHash];
+            return true;
+        } else
+            return false;
+    };
+
+    var WeakSet = function WeakSet(iterable) {
+        if (!(this instanceof WeakSet) || isWeakSet(this))
+            throw new TypeError("Constructor WeakSet requires 'new'");
+        setupWeakSetInternals(this);
+    };
+
+    var setupWeakSetInternals = function (weakSet) {
+        defineProperties(weakSet, {
+            _isWeakSet: {
+                value: true
+            },
+            _objectHash: {
+                value: Symbol("Hash(weakset)")
+            }
+        });
+    };
+
+    defineProperty(WeakSet.prototype, Symbol.toStringTag.toString(), {
+        value: "WeakSet",
+        configurable: true
+    });
+
+    var checkWeakSetInternals = function (weakSet) {
+        return weakSet._isWeakSet === true
+            && ES6.isSymbol(weakSet._objectHash);
+    };
+
+    var isWeakSet = function (weakSet) {
+        return weakSet instanceof WeakSet && checkWeakSetInternals(weakSet);
+    };
+
+    // WARNING: This method puts a link in the value object to reduce time complexity to O(1).
+    // So, after weakSet.add(value) call, if the linker property of the value object is deleted
+    // then weakSet.has(value) will return false.
+    // Time complexity: O(1) for all cases(there is no worst case)
+    // Space complexity is O(n) for all cases.
+    WeakSet.prototype.add = function add(value) {
+        if (!isWeakSet(this))
+            throw new TypeError("Method WeakSet.prototype.add called on incompatible receiver " + this);
+        // No symbol is allowed in WeakSet as value
+        if (!isObject(value) || ES6.isSymbol(value))
+            throw new TypeError("Invalid value used in weak set");
+        var objectHash = this._objectHash;
+        if (value[objectHash] === objectHash.toString()) {
+            // Just ignore if the value already exists
+        } else {
+            defineProperty(value, objectHash.toString(), {
+                value: objectHash.toString(),
+                configurable: true
+            });
+        }
+        return this;
+    };
+
+    WeakSet.prototype.has = function has(value) {
+        if (!isWeakSet(this))
+            throw new TypeError("Method WeakSet.prototype.has called on incompatible receiver " + this);
+        if (!isObject(value) || ES6.isSymbol(value))
+            return false;
+        var objectHash = this._objectHash;
+        return value[objectHash] === objectHash.toString();
+    };
+
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
     var ES6 = {
@@ -1375,6 +1545,18 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
         defineProperty(global, "Set", {
             value: Set,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(global, "WeakMap", {
+            value: WeakMap,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(global, "WeakSet", {
+            value: WeakSet,
             writable: true,
             configurable: true
         });
