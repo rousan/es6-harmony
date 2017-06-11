@@ -1,12 +1,14 @@
 /*!
  * ES6 v1.0.0
- * This module provides an approximate equivalent implementation of ES6(Harmony)'s
- * new features in pure ES5 for backward compatibility. This API has no dependencies.
+ * This module provides an equivalent implementation of ES6(Harmony)
+ * in pure ES5 code and creates a ES6 environment for backward browsers or JavaScript engines
+ * that does not support ES6.(At least ES5 is required).
+ * This Library is standalone, it has no dependency.
  *
  * @license Copyright (c) 2017 Ariyan Khan, MIT License
  *
  * Codebase: https://github.com/ariyankhan/es6
- * Date: Jun 10, 2017
+ * Date: Jun 12, 2017
  */
 
 
@@ -1442,6 +1444,12 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         if (!(this instanceof WeakSet) || isWeakSet(this))
             throw new TypeError("Constructor WeakSet requires 'new'");
         setupWeakSetInternals(this);
+
+        if (iterable !== null && iterable !== undefined) {
+            ES6.forOf(iterable, function (entry) {
+                this.add(entry);
+            }, this);
+        }
     };
 
     var setupWeakSetInternals = function (weakSet) {
@@ -1454,11 +1462,6 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             }
         });
     };
-
-    defineProperty(WeakSet.prototype, Symbol.toStringTag.toString(), {
-        value: "WeakSet",
-        configurable: true
-    });
 
     var checkWeakSetInternals = function (weakSet) {
         return weakSet._isWeakSet === true
@@ -1492,6 +1495,8 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return this;
     };
 
+    // Time complexity: O(1) for all cases(there is no worst case)
+    // Space complexity is O(1) for all cases.
     WeakSet.prototype.has = function has(value) {
         if (!isWeakSet(this))
             throw new TypeError("Method WeakSet.prototype.has called on incompatible receiver " + this);
@@ -1500,6 +1505,25 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         var objectHash = this._objectHash;
         return value[objectHash] === objectHash.toString();
     };
+
+    WeakSet.prototype.delete = function (value) {
+        if (!isWeakSet(this))
+            throw new TypeError("Method WeakSet.prototype.delete called on incompatible receiver " + this);
+        if (!isObject(value) || ES6.isSymbol(value))
+            return false;
+        var objectHash = this._objectHash;
+        if (value[objectHash] === objectHash.toString()) {
+            delete value[objectHash];
+            return true;
+        } else
+            return false;
+    };
+
+    defineProperty(WeakSet.prototype, Symbol.toStringTag.toString(), {
+        value: "WeakSet",
+        configurable: true
+    });
+
 
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
