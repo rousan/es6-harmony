@@ -4,14 +4,6 @@ Provides an equivalent implementation of ES6(Harmony)
 in pure ES5 code and creates a ES6 environment for backward browsers or
 JavaScript engines that natively does not support ES6.(At least ES5 is required).
 This Library is standalone, it has no dependency.
-
-## Installation
-
-If you want to use this module then,
-* In browser context, just include this script before all other scripts
-* In NodeJS or CommonJS environment, install it via npm and import it
-
-     `npm install es6-harmony`
      
 ## Implementations
 
@@ -75,9 +67,19 @@ If you want to use this module then,
     * `Symbol.prototype.toString()`
     * `Symbol.prototype.valueOf()`
     
-    
-    
-    
+## Installation
+
+If you want to use this module then,
+* In browser context, just include this script before all other scripts
+* In NodeJS or CommonJS environment, install it via npm and import it
+
+     `npm install es6-harmony`    
+     
+## Test
+Run the following script
+
+     `npm test`
+     
 ## Contributors
    * [Ariyan Khan](https://github.com/ariyankhan)
    
