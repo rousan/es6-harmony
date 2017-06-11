@@ -96,6 +96,8 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
     var MapIterator = function MapIterator(map, flag) {
         this._map = map;
         this._flag = flag;
+        this._currentEntry = null;
+        this._done = false;
     };
 
     var SetIterator = function SetIterator(set, flag) {
@@ -450,6 +452,44 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         }
     };
 
+    MapIterator.prototype.next = function next() {
+        if (!(this instanceof MapIterator))
+            throw new TypeError("Method Map Iterator.prototype.next called on incompatible receiver " + String(this));
+        var self = this,
+            nextValue;
+        if (self._done) {
+            return {
+                done: true,
+                value: undefined
+            };
+        }
+        if (self._currentEntry === null)
+            self._currentEntry = self._map._head;
+        else
+            self._currentEntry = self._currentEntry.next;
+
+        if (self._currentEntry === null) {
+            self._done = true;
+            return {
+                done: true,
+                value: undefined
+            };
+        }
+        // _flag = 1 for [key, value]
+        // _flag = 2 for [value]
+        // _flag = 3 for [key]
+        if (self._flag === 1)
+            nextValue = [self._currentEntry.key, self._currentEntry.value];
+        else if (self._flag === 2)
+            nextValue = self._currentEntry.value;
+        else if (self._flag === 3)
+            nextValue = self._currentEntry.key;
+        return {
+            done: false,
+            value: nextValue
+        };
+    };
+
     var es6ArrayPrototypeIteratorSymbol = function values() {
         if (this === undefined || this === null)
             throw new TypeError("Cannot convert undefined or null to object");
@@ -733,34 +773,49 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         if (!(this instanceof Map) || isMap(this))
             throw new TypeError("Constructor Map requires 'new'");
         setupMapInternals(this);
+
+        if (iterable !== null && iterable !== undefined) {
+            ES6.forOf(iterable, function (entry) {
+                if (!isObject(entry))
+                    throw new TypeError("Iterator value " + entry + " is not an entry object");
+                this.set(entry[0], entry[1]);
+            }, this);
+        }
     };
 
-    Map.prototype.set = function (key, value) {
+    // WARNING: This method puts a link in the key object to reduce time complexity to O(1).
+    // So, after map.set(key) call, if the linker property of the key object is deleted
+    // then map.has(key) will returns false.
+    // Time complexity: O(1) for all cases(there is no worst case, same for both primitive and object key).
+    // Space complexity is O(n) for all cases.
+    Map.prototype.set = function set(key, value) {
         if (!isMap(this))
             throw new TypeError("Method Map.prototype.set called on incompatible receiver " + this);
         var keyHash = hash(key),
-            hashForObject = getHiddenHashForObject("map"),
+            objectHash = this._objectHash,
             entry;
         if (keyHash === null) {
-            if (typeof key[hashForObject] === "number" && this._data.objects[key[hashForObject]] instanceof MapEntry) {
-                entry = this._data.objects[key[hashForObject]];
-                entry._value = value;
+            if (typeof key[objectHash] === "number" && this._data.objects[key[objectHash]] instanceof MapEntry) {
+                entry = this._data.objects[key[objectHash]];
+                entry.value = value;
                 return this;
             }
             entry = new MapEntry(key, value);
             this._data.objects.push(entry);
-            defineProperty(key, hashForObject, {
+            defineProperty(key, objectHash.toString(), {
                 value: this._data.objects.length - 1,
                 configurable: true
             });
+            this._size++;
         } else {
-            if (typeof this._data.primitives[keyHash] instanceof MapEntry) {
+            if (this._data.primitives[keyHash] instanceof MapEntry) {
                 entry = this._data.primitives[keyHash];
                 entry.value = value;
                 return this;
             }
             entry = new MapEntry(key, value);
             this._data.primitives[keyHash] = entry;
+            this._size++;
         }
 
         if (this._head === null) {
@@ -779,6 +834,160 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return this;
     };
 
+    // Time complexity: O(1) for all cases(there is no worst case, same for both primitive and object key).
+    // Space complexity is O(1)
+    Map.prototype.has = function has(key) {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.has called on incompatible receiver " + this);
+        var keyHash = hash(key),
+            objectHash = this._objectHash;
+
+        if (keyHash === null)
+            return typeof key[objectHash] === "number" && this._data.objects[key[objectHash]] instanceof MapEntry;
+        else
+            return this._data.primitives[keyHash] instanceof MapEntry;
+    };
+
+    // Time complexity: O(1) for all cases(there is no worst case, same for both primitive and object key).
+    // Space complexity is O(1)
+    Map.prototype.get = function get(key) {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.get called on incompatible receiver " + this);
+        var keyHash = hash(key),
+            objectHash = this._objectHash;
+        if (keyHash === null) {
+            if (typeof key[objectHash] === "number" && this._data.objects[key[objectHash]] instanceof MapEntry)
+                return this._data.objects[key[objectHash]].value;
+        } else {
+            if (this._data.primitives[keyHash] instanceof MapEntry)
+                return this._data.primitives[keyHash].value;
+        }
+    };
+
+    // Time complexity: O(n)
+    // Space complexity is O(1)
+    Map.prototype.clear = function clear() {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.clear called on incompatible receiver " + this);
+        var entry;
+        // Clear all primitive keys
+        Object.getOwnPropertyNames(this._data.primitives).forEach(function (prop) {
+            if (this._data.primitives[prop] instanceof MapEntry) {
+                entry = this._data.primitives[prop];
+                delete this._data.primitives[prop];
+                entry.next = null;
+                entry.prev = null;
+            }
+        }, this);
+
+        // Clear all object keys
+        Object.getOwnPropertyNames(this._data.objects).forEach(function (prop) {
+            if (this._data.objects[prop] instanceof MapEntry) {
+                entry = this._data.objects[prop];
+                delete this._data.objects[prop];
+                delete entry.key[this._objectHash];
+                entry.next = null;
+                entry.prev = null;
+            }
+        }, this);
+        this._data.objects.length = 0;
+
+        // Free head and tail MapEntry
+        this._head = null;
+        this._tail = null;
+        this._size = 0;
+    };
+
+    // Time complexity: O(1) for all cases(there is no worst case, same for both primitive and object key).
+    // Space complexity is O(1)
+    Map.prototype.delete = function (key) {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.delete called on incompatible receiver " + this);
+        var keyHash = hash(key),
+            objectHash = this._objectHash,
+            entry;
+        if (keyHash === null) {
+            if (typeof key[objectHash] === "number" && this._data.objects[key[objectHash]] instanceof MapEntry) {
+                entry = this._data.objects[key[objectHash]];
+                delete this._data.objects[key[objectHash]];
+                delete entry.key[objectHash];
+            } else
+                return false;
+        } else {
+            if (this._data.primitives[keyHash] instanceof MapEntry) {
+                entry = this._data.primitives[keyHash];
+                delete this._data.primitives[keyHash];
+            } else {
+                return false;
+            }
+        }
+
+        if (entry.prev !== null && entry.next !== null) {
+            entry.prev.next = entry.next;
+            entry.next.prev = entry.prev;
+            entry.next = null;
+            entry.prev = null;
+        } else if(entry.prev === null && entry.next !== null) {
+            this._head = entry.next;
+            entry.next.prev = null;
+            entry.next = null;
+        } if (entry.prev !== null && entry.next === null) {
+            this._tail = entry.prev;
+            entry.prev.next = null;
+            entry.prev = null;
+        } else {
+            this._head = null;
+            this._tail = null;
+        }
+        this._size--;
+        return true;
+    };
+
+    defineProperty(Map.prototype, "size", {
+        get: function size() {
+            if (!isMap(this))
+                throw new TypeError("Method Map.prototype.size called on incompatible receiver " + this);
+            return this._size;
+        },
+        configurable: true
+    });
+
+    Map.prototype.entries = function entries() {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.entries called on incompatible receiver " + this);
+        return new MapIterator(this, 1);
+    };
+
+    Map.prototype.values = function values() {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.values called on incompatible receiver " + this);
+        return new MapIterator(this, 2);
+    };
+
+    Map.prototype.keys = function keys() {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.keys called on incompatible receiver " + this);
+        return new MapIterator(this, 3);
+    };
+
+    Map.prototype.forEach = function forEach(callback, thisArg) {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.forEach called on incompatible receiver " + this);
+        if (!isCallable(callback))
+            throw new TypeError(callback + " is not a function");
+        var currentEntry = this._head;
+        while(currentEntry !== null) {
+            callback.call(thisArg, currentEntry.value, currentEntry.key, this);
+            currentEntry = currentEntry.next;
+        }
+    };
+
+    Map.prototype[Symbol.iterator] = Map.prototype.entries;
+
+    defineProperty(Map.prototype, Symbol.toStringTag.toString(), {
+        value: "Map",
+        configurable: true
+    });
 
     var setupMapInternals = function (map) {
         defineProperties(map, {
@@ -795,6 +1004,10 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             },
             _objectHash: {
                 value: Symbol("Hash(map)")
+            },
+            _size: {
+                value: 0,
+                writable: true
             },
             _data: {
                 value: create(null, {
@@ -814,6 +1027,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             && (map._head === null || map._head instanceof MapEntry)
             && (map._tail === null || map._tail instanceof MapEntry)
             && ES6.isSymbol(map._objectHash)
+            && typeof map._size === "number"
             && isObject(map._data)
             && isObject(map._data.primitives)
             && isArray(map._data.objects);
