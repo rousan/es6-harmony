@@ -2,7 +2,7 @@
 
 "use strict";
 
-const mod = require("../es6");
+const mod = require("../es6-harmony");
 let ES6 = mod.ES6;
 let Symbol = mod.Symbol;
 let Map = mod.Map;

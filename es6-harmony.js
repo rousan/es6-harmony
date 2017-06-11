@@ -1,5 +1,5 @@
 /*!
- * ES6 v1.0.1
+ * ES6 Harmony v1.0.0
  * This module provides an equivalent implementation of ES6(Harmony)
  * in pure ES5 code and creates a ES6 environment for backward browsers or
  * JavaScript engines that natively does not support ES6.(At least ES5 is required).
@@ -7,7 +7,7 @@
  *
  * @license Copyright (c) 2017 Ariyan Khan, MIT License
  *
- * Codebase: https://github.com/ariyankhan/es6
+ * Codebase: https://github.com/ariyankhan/es6-harmony.git
  * Date: Jun 12, 2017
  */
 
