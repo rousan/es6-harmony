@@ -103,6 +103,8 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
     var SetIterator = function SetIterator(set, flag) {
         this._set = set;
         this._flag = flag;
+        this._currentEntry = null;
+        this._done = false;
     };
 
     var isES6Running = function() {
@@ -484,6 +486,41 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             nextValue = self._currentEntry.value;
         else if (self._flag === 3)
             nextValue = self._currentEntry.key;
+        return {
+            done: false,
+            value: nextValue
+        };
+    };
+
+    SetIterator.prototype.next = function next() {
+        if (!(this instanceof SetIterator))
+            throw new TypeError("Method Set Iterator.prototype.next called on incompatible receiver " + String(this));
+        var self = this,
+            nextValue;
+        if (self._done) {
+            return {
+                done: true,
+                value: undefined
+            };
+        }
+        if (self._currentEntry === null)
+            self._currentEntry = self._set._head;
+        else
+            self._currentEntry = self._currentEntry.next;
+
+        if (self._currentEntry === null) {
+            self._done = true;
+            return {
+                done: true,
+                value: undefined
+            };
+        }
+        // _flag = 1 for [value, value]
+        // _flag = 2 for [value]
+        if (self._flag === 1)
+            nextValue = [self._currentEntry.value, self._currentEntry.value];
+        else if (self._flag === 2)
+            nextValue = self._currentEntry.value;
         return {
             done: false,
             value: nextValue
@@ -1044,7 +1081,255 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         this.prev = null;
     };
 
+    var Set = function Set(iterable) {
+        if (!(this instanceof Set) || isSet(this))
+            throw new TypeError("Constructor Set requires 'new'");
+        setupSetInternals(this);
 
+        if (iterable !== null && iterable !== undefined) {
+            ES6.forOf(iterable, function (entry) {
+                this.add(entry);
+            }, this);
+        }
+    };
+
+    // WARNING: This method puts a link in the value object to reduce time complexity to O(1).
+    // So, after set.add(value) call, if the linker property of the value object is deleted
+    // then set.has(value) will returns false.
+    // Time complexity: O(1) for all cases(there is no worst case, same for both primitive and object value).
+    // Space complexity is O(n) for all cases.
+    Set.prototype.add = function add(value) {
+        if (!isSet(this))
+            throw new TypeError("Method Set.prototype.add called on incompatible receiver " + this);
+        var valueHash = hash(value),
+            objectHash = this._objectHash,
+            entry;
+        if (valueHash === null) {
+            if (typeof value[objectHash] === "number" && this._data.objects[value[objectHash]] instanceof SetEntry) {
+                // If the value is already present then just return 'this'
+                return this;
+            }
+            entry = new SetEntry(value);
+            this._data.objects.push(entry);
+            defineProperty(value, objectHash.toString(), {
+                value: this._data.objects.length - 1,
+                configurable: true
+            });
+            this._size++;
+        } else {
+            if (this._data.primitives[valueHash] instanceof SetEntry) {
+                // If the value is already present then just return 'this'
+                return this;
+            }
+            entry = new SetEntry(value);
+            this._data.primitives[valueHash] = entry;
+            this._size++;
+        }
+
+        if (this._head === null) {
+            this._head = entry;
+            entry.next = null;
+            entry.prev = null;
+        }
+        if (this._tail === null)
+            this._tail = this._head;
+        else {
+            this._tail.next = entry;
+            entry.prev = this._tail;
+            entry.next = null;
+            this._tail = entry;
+        }
+        return this;
+    };
+
+    // Time complexity: O(1) for all cases(there is no worst case, same for both primitive and object value).
+    // Space complexity is O(1)
+    Set.prototype.has = function has(value) {
+        if (!isSet(this))
+            throw new TypeError("Method Set.prototype.has called on incompatible receiver " + this);
+        var valueHash = hash(value),
+            objectHash = this._objectHash;
+
+        if (valueHash === null)
+            return typeof value[objectHash] === "number" && this._data.objects[value[objectHash]] instanceof SetEntry;
+        else
+            return this._data.primitives[valueHash] instanceof SetEntry;
+    };
+
+    // Time complexity: O(n)
+    // Space complexity is O(1)
+    Set.prototype.clear = function clear() {
+        if (!isSet(this))
+            throw new TypeError("Method Set.prototype.clear called on incompatible receiver " + this);
+        var entry;
+        // Clear all primitive values
+        Object.getOwnPropertyNames(this._data.primitives).forEach(function (prop) {
+            if (this._data.primitives[prop] instanceof SetEntry) {
+                entry = this._data.primitives[prop];
+                delete this._data.primitives[prop];
+                entry.next = null;
+                entry.prev = null;
+            }
+        }, this);
+
+        // Clear all object values
+        Object.getOwnPropertyNames(this._data.objects).forEach(function (prop) {
+            if (this._data.objects[prop] instanceof SetEntry) {
+                entry = this._data.objects[prop];
+                delete this._data.objects[prop];
+                delete entry.value[this._objectHash];
+                entry.next = null;
+                entry.prev = null;
+            }
+        }, this);
+        this._data.objects.length = 0;
+
+        // Free head and tail MapEntry
+        this._head = null;
+        this._tail = null;
+        this._size = 0;
+    };
+
+    // Time complexity: O(1) for all cases(there is no worst case, same for both primitive and object value).
+    // Space complexity is O(1)
+    Set.prototype.delete = function (value) {
+        if (!isSet(this))
+            throw new TypeError("Method Set.prototype.delete called on incompatible receiver " + this);
+        var valueHash = hash(value),
+            objectHash = this._objectHash,
+            entry;
+        if (valueHash === null) {
+            if (typeof value[objectHash] === "number" && this._data.objects[value[objectHash]] instanceof SetEntry) {
+                entry = this._data.objects[value[objectHash]];
+                delete this._data.objects[value[objectHash]];
+                delete entry.value[objectHash];
+            } else
+                return false;
+        } else {
+            if (this._data.primitives[valueHash] instanceof SetEntry) {
+                entry = this._data.primitives[valueHash];
+                delete this._data.primitives[valueHash];
+            } else {
+                return false;
+            }
+        }
+
+        if (entry.prev !== null && entry.next !== null) {
+            entry.prev.next = entry.next;
+            entry.next.prev = entry.prev;
+            entry.next = null;
+            entry.prev = null;
+        } else if(entry.prev === null && entry.next !== null) {
+            this._head = entry.next;
+            entry.next.prev = null;
+            entry.next = null;
+        } if (entry.prev !== null && entry.next === null) {
+            this._tail = entry.prev;
+            entry.prev.next = null;
+            entry.prev = null;
+        } else {
+            this._head = null;
+            this._tail = null;
+        }
+        this._size--;
+        return true;
+    };
+
+    Set.prototype.entries = function entries() {
+        if (!isSet(this))
+            throw new TypeError("Method Set.prototype.entries called on incompatible receiver " + this);
+        return new SetIterator(this, 1);
+    };
+
+    Set.prototype.values = function values() {
+        if (!isSet(this))
+            throw new TypeError("Method Set.prototype.values called on incompatible receiver " + this);
+        return new SetIterator(this, 2);
+    };
+
+    Set.prototype.keys = Set.prototype.values;
+
+    Set.prototype[Symbol.iterator] = Set.prototype.values;
+
+    defineProperty(Set.prototype, "size", {
+        get: function size() {
+            if (!isSet(this))
+                throw new TypeError("Method Set.prototype.size called on incompatible receiver " + this);
+            return this._size;
+        },
+        configurable: true
+    });
+
+    Set.prototype.forEach = function forEach(callback, thisArg) {
+        if (!isSet(this))
+            throw new TypeError("Method Set.prototype.forEach called on incompatible receiver " + this);
+        if (!isCallable(callback))
+            throw new TypeError(callback + " is not a function");
+        var currentEntry = this._head;
+        while(currentEntry !== null) {
+            callback.call(thisArg, currentEntry.value, currentEntry.value, this);
+            currentEntry = currentEntry.next;
+        }
+    };
+
+    defineProperty(Set.prototype, Symbol.toStringTag.toString(), {
+        value: "Set",
+        configurable: true
+    });
+
+    var setupSetInternals = function (set) {
+        defineProperties(set, {
+            _isSet: {
+                value: true
+            },
+            _head: {
+                value: null,
+                writable: true
+            },
+            _tail: {
+                value: null,
+                writable: true
+            },
+            _objectHash: {
+                value: Symbol("Hash(set)")
+            },
+            _size: {
+                value: 0,
+                writable: true
+            },
+            _data: {
+                value: create(null, {
+                    primitives: {
+                        value: create(null) /* [[Prototype]] must be null */
+                    },
+                    objects: {
+                        value: []
+                    }
+                })
+            }
+        });
+    };
+
+    var checkSetInternals = function (set) {
+        return set._isSet === true
+            && (set._head === null || set._head instanceof SetEntry)
+            && (set._tail === null || set._tail instanceof SetEntry)
+            && ES6.isSymbol(set._objectHash)
+            && typeof set._size === "number"
+            && isObject(set._data)
+            && isObject(set._data.primitives)
+            && isArray(set._data.objects);
+    };
+
+    var SetEntry = function SetEntry(value) {
+        this.value = value;
+        this.next = null;
+        this.prev = null;
+    };
+
+    var isSet = function (set) {
+        return set instanceof Set && checkSetInternals(set);
+    };
 
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
@@ -1084,6 +1369,12 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
         defineProperty(global, "Map", {
             value: Map,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(global, "Set", {
+            value: Set,
             writable: true,
             configurable: true
         });
