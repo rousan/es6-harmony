@@ -63,6 +63,8 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
     var min = Math.min;
 
+    var create = Object.create;
+
     var emptyFunction = function () {};
 
     var simpleFunction = function (arg) {
@@ -704,6 +706,132 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return self;
     };
 
+    // Returns hash for primitive typed key like this:
+    // undefined or null => I___toString(key)
+    // number => N___toString(key)
+    // string => S___toString(key)
+    // boolean => B___toString(key)
+    //
+    // But returns null for object typed key.
+    var hash = function (key) {
+        // String(0) === String(-0)
+        // String(NaN) === String(NaN)
+        var strKey = String(key);
+        if (key === undefined || key === null)
+            return "I___" + strKey;
+        else if (typeof key === "number")
+            return "N___" + strKey;
+        else if (typeof key === "string")
+            return "S___" + strKey;
+        else if (typeof key === "boolean")
+            return "B___" + strKey;
+        else
+            return null; /* For object key */
+    };
+
+    var Map = function Map(iterable) {
+        if (!(this instanceof Map) || isMap(this))
+            throw new TypeError("Constructor Map requires 'new'");
+        setupMapInternals(this);
+    };
+
+    Map.prototype.set = function (key, value) {
+        if (!isMap(this))
+            throw new TypeError("Method Map.prototype.set called on incompatible receiver " + this);
+        var keyHash = hash(key),
+            hashForObject = getHiddenHashForObject("map"),
+            entry;
+        if (keyHash === null) {
+            if (typeof key[hashForObject] === "number" && this._data.objects[key[hashForObject]] instanceof MapEntry) {
+                entry = this._data.objects[key[hashForObject]];
+                entry._value = value;
+                return this;
+            }
+            entry = new MapEntry(key, value);
+            this._data.objects.push(entry);
+            defineProperty(key, hashForObject, {
+                value: this._data.objects.length - 1,
+                configurable: true
+            });
+        } else {
+            if (typeof this._data.primitives[keyHash] instanceof MapEntry) {
+                entry = this._data.primitives[keyHash];
+                entry.value = value;
+                return this;
+            }
+            entry = new MapEntry(key, value);
+            this._data.primitives[keyHash] = entry;
+        }
+
+        if (this._head === null) {
+            this._head = entry;
+            entry.next = null;
+            entry.prev = null;
+        }
+        if (this._tail === null)
+            this._tail = this._head;
+        else {
+            this._tail.next = entry;
+            entry.prev = this._tail;
+            entry.next = null;
+            this._tail = entry;
+        }
+        return this;
+    };
+
+
+    var setupMapInternals = function (map) {
+        defineProperties(map, {
+            _isMap: {
+                value: true
+            },
+            _head: {
+                value: null,
+                writable: true
+            },
+            _tail: {
+                value: null,
+                writable: true
+            },
+            _objectHash: {
+                value: Symbol("Hash(map)")
+            },
+            _data: {
+                value: create(null, {
+                    primitives: {
+                        value: create(null) /* [[Prototype]] must be null */
+                    },
+                    objects: {
+                        value: []
+                    }
+                })
+            }
+        });
+    };
+
+    var checkMapInternals = function (map) {
+        return map._isMap === true
+            && (map._head === null || map._head instanceof MapEntry)
+            && (map._tail === null || map._tail instanceof MapEntry)
+            && ES6.isSymbol(map._objectHash)
+            && isObject(map._data)
+            && isObject(map._data.primitives)
+            && isArray(map._data.objects);
+    };
+
+    var isMap = function (map) {
+        return map instanceof Map && checkMapInternals(map);
+    };
+
+    var MapEntry = function MapEntry(key, value) {
+        this.key = key;
+        this.value = value;
+        this.next = null;
+        this.prev = null;
+    };
+
+
+
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
     var ES6 = {
@@ -718,6 +846,8 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
         // This method behaves exactly same as ES6 for...of loop.
         forOf: es6ForOfLoop,
+
+        isMap: isMap,
 
         // This method gives same functionality of the spread operator of ES6
         // It works on only functions and arrays.
@@ -734,6 +864,12 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
     else {
         defineProperty(global, "Symbol", {
             value: Symbol,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(global, "Map", {
+            value: Map,
             writable: true,
             configurable: true
         });
