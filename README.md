@@ -78,7 +78,7 @@ If you want to use this module then,
 ## Test
 Run the following script
 
-     `npm test`
+   `npm test`
      
 ## Contributors
    * [Ariyan Khan](https://github.com/ariyankhan)
