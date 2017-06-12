@@ -1,7 +1,7 @@
 /*!
  * ES6 Harmony v0.1.1
  * This module provides an equivalent implementation of ES6(Harmony)
- * in pure ES5 code and creates a ES6 environment for backward browsers or
+ * in pure ES5 code and creates a ES6 environment for old browsers or
  * JavaScript engines that natively does not support ES6.(At least ES5 is required).
  * This Library is standalone, it has no dependency.
  *
@@ -1506,6 +1506,8 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return value[objectHash] === objectHash.toString();
     };
 
+    // Time complexity: O(1) for all cases(there is no worst case)
+    // Space complexity is O(1) for all cases.
     WeakSet.prototype.delete = function (value) {
         if (!isWeakSet(this))
             throw new TypeError("Method WeakSet.prototype.delete called on incompatible receiver " + this);
