@@ -117,6 +117,15 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return value !== null && (typeof value === "object" || typeof value === "function");
     };
 
+    var addToMessageQueue = function (fn, thisArg) {
+        if (!isCallable(fn))
+            throw new TypeError(fn + " is not a function");
+        var args = slice.call(arguments, 2);
+        setTimeout(function () {
+            fn.apply(thisArg, args);
+        });
+    };
+
     var es6FunctionPrototypeHasInstanceSymbol = function (instance) {
         if (typeof this !== "function")
             return false;
@@ -1526,6 +1535,240 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         configurable: true
     });
 
+    var Promise = function Promise(executor) {
+        if (!(this instanceof Promise) || isPromise(this))
+            throw new TypeError(String(this) + " is not a promise");
+        if (!isCallable(executor))
+            throw new TypeError("Promise resolver " + String(executor) + " is not a function");
+        setupPromiseInternals(this);
+        try {
+            executor(this._resolve, this._reject);
+        } catch (e) {
+            this._reject(e);
+        }
+    };
+
+    Promise.resolve = function resolve(value) {
+        if (isPromise(value))
+            return value;
+        return new Promise(function (resolve, reject) {
+            if (isObject(value) && isCallable(value.then)) {
+                addToMessageQueue(function () {
+                    try {
+                        value.then(resolve, reject);
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+            else
+                resolve(value);
+        });
+    };
+
+    Promise.reject = function reject(reason) {
+        return new Promise(function (resoolve, reject) {
+            reject(reason);
+        });
+    };
+
+    Promise.prototype.then = function then(onFulfilled, onRejected) {
+        if (!isPromise(this))
+            throw new TypeError(this + " is not a promise");
+        onFulfilled = !isCallable(onFulfilled) ? defaultPromiseOnFulfilled : onFulfilled;
+        onRejected = !isCallable(onRejected) ? defaultPromiseOnRejected : onRejected;
+
+        var chainedPromise = new Promise(function (resolve, reject) {}),
+            nextOnFulfilled,
+            nextOnRejected;
+
+        nextOnFulfilled = function (value) {
+            var result;
+            try {
+                result = onFulfilled(value);
+                if (isPromise(result)) {
+                    if (isFulfilledPromise(result))
+                        chainedPromise._resolve(result._value);
+                    else if (isRejectedPromise(result))
+                        chainedPromise._reject(result._reason);
+                    else if (isPendingPromise(result)) {
+                        result._resolve = (function (value) {
+                            this._resolve(value);
+                            chainedPromise._resolve(value);
+                        }).bind(result);
+                        result._reject = (function (reason) {
+                            this._reject(reason);
+                            chainedPromise._reject(reason);
+                        }).bind(result);
+                    }
+                } else
+                    chainedPromise._resolve(result);
+            } catch (e) {
+                chainedPromise._reject(e);
+            }
+        };
+
+        nextOnRejected = function (reason) {
+            var result;
+            try {
+                result = onRejected(reason);
+                if (isPromise(result)) {
+                    if (isFulfilledPromise(result))
+                        chainedPromise._resolve(result._value);
+                    else if (isRejectedPromise(result))
+                        chainedPromise._reject(result._reason);
+                    else if (isPendingPromise(result)) {
+                        result._resolve = (function (value) {
+                            this._resolve(value);
+                            chainedPromise._resolve(value);
+                        }).bind(result);
+                        result._reject = (function (reason) {
+                            this._reject(reason);
+                            chainedPromise._reject(reason);
+                        }).bind(result);
+                    }
+                } else
+                    chainedPromise._resolve(result);
+            } catch (e) {
+                chainedPromise._reject(e);
+            }
+        };
+
+        if (isPendingPromise(this)) {
+            this._onFulfilled.push(nextOnFulfilled);
+            this._onRejected.push(nextOnRejected);
+        } else if (isFulfilledPromise(this)) {
+            addToMessageQueue(nextOnFulfilled, undefined, this._value);
+        } else if (isRejectedPromise(this))
+            addToMessageQueue(nextOnRejected, undefined, this._reason);
+        return chainedPromise;
+    };
+
+    var defaultPromiseOnFulfilled = function (value) {
+        return Promise.resolve(value);
+    };
+
+    var defaultPromiseOnRejected = function (reason) {
+        Promise.reject(reason);
+    };
+
+    var promiseResolve = function (value) {
+        // Just return if the promise is settled already
+        if (isSettledPromise(this))
+            return;
+        defineProperties(this, {
+            _state: {
+                value: "fulfilled"
+            },
+            _value: {
+                value: value
+            }
+        });
+        if (this._onFulfilled.length > 0) {
+            addToMessageQueue(function (value) {
+                this._onFulfilled.forEach(function (callback) {
+                    callback(value);
+                });
+                // Free the references of the callbacks, because
+                // these are not needed anymore after calling first time _resolve() method
+                this._onFulfilled.length = 0;
+                this._onRejected.length = 0;
+            }, this, value);
+        }
+    };
+
+    var promiseReject = function (reason) {
+        // Just return if the promise is settled already
+        if (isSettledPromise(this))
+            return;
+        defineProperties(this, {
+            _state: {
+                value: "rejected"
+            },
+            _reason: {
+                value: reason
+            }
+        });
+        if (this._onRejected.length > 0) {
+            addToMessageQueue(function (reason) {
+                this._onRejected.forEach(function (callback) {
+                    callback(reason);
+                });
+                // Free the references of the callbacks, because
+                // these are not needed anymore after calling first time _reject() method
+                this._onFulfilled.length = 0;
+                this._onRejected.length = 0;
+            }, this, reason);
+        }
+    };
+
+    var setupPromiseInternals = function (promise) {
+        defineProperties(promise, {
+            _isPromise: {
+                value: true
+            },
+            _onFulfilled: {
+                value: []
+            },
+            _onRejected: {
+                value: []
+            },
+            _resolve: {
+                value: promiseResolve.bind(promise)
+            },
+            _reject: {
+                value: promiseReject.bind(promise)
+            },
+            _state: {
+                value: "pending",
+                configurable: true
+            },
+            _value: {
+                value: undefined,
+                configurable: true
+            },
+            _reason: {
+                value: undefined,
+                configurable: true
+            }
+        });
+    };
+
+    var isPendingPromise = function (promise) {
+        return promise._state === "pending";
+    };
+
+    var isFulfilledPromise = function (promise) {
+        return promise._state === "fulfilled";
+    };
+
+    var isRejectedPromise = function (promise) {
+        return promise._state === "rejected";
+    };
+
+    var isSettledPromise = function (promise) {
+        return promise._state === "fulfilled" || promise._state === "rejected";
+    };
+
+    var isValidPromiseState = function (state) {
+        return ["pending", "fulfilled", "rejected"].indexOf(String(state)) !== -1;
+    };
+
+    var checkPromiseInternals = function (promise) {
+        return promise._isPromise === true
+            && isArray(promise._onFulfilled)
+            && isArray(promise._onRejected)
+            && isCallable(promise._resolve)
+            && isCallable(promise._reject)
+            && isValidPromiseState(promise._state)
+            && promise.hasOwnProperty("_value")
+            && promise.hasOwnProperty("_reason")
+    };
+
+    var isPromise = function (promise) {
+        return promise instanceof Promise && checkPromiseInternals(promise);
+    };
+
 
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
@@ -1583,6 +1826,12 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
         defineProperty(global, "WeakSet", {
             value: WeakSet,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(global, "Promise", {
+            value: Promise,
             writable: true,
             configurable: true
         });
