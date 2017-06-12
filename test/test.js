@@ -18,7 +18,7 @@ m.set(t, 12);
 
 var m1 = new Map();
 
-m1.set(t, 111);
+m1.set(t, 111); // legacy
 
 
 console.log(m.get(t), m1.get(t));

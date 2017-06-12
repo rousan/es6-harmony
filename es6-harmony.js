@@ -1551,7 +1551,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         spreadOperator: es6SpreadOperator
     };
 
-    // Addition of all the patches to support ES6 in ES5
+    // Add all the patches to support ES6 in ES5
     // If the running environment already supports ES6 then no patches will be applied,
     // just an empty object will be exported as 'ES6'.
     if (isES6Running())
