@@ -1542,7 +1542,11 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             throw new TypeError("Promise resolver " + String(executor) + " is not a function");
         setupPromiseInternals(this);
         try {
-            executor(this._resolve, this._reject);
+            executor((function (value) {
+                this._resolve(value);
+            }).bind(this), (function (reason) {
+                this._reject(reason);
+            }).bind(this));
         } catch (e) {
             this._reject(e);
         }
@@ -1583,7 +1587,9 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             nextOnRejected;
 
         nextOnFulfilled = function (value) {
-            var result;
+            var result,
+                temp1,
+                temp2;
             try {
                 result = onFulfilled(value);
                 if (isPromise(result)) {
@@ -1592,16 +1598,24 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
                     else if (isRejectedPromise(result))
                         chainedPromise._reject(result._reason);
                     else if (isPendingPromise(result)) {
-                        result._resolve = (function (value) {
-                            this._resolve(value);
-                            chainedPromise._resolve(value);
-                        }).bind(result);
-                        result._reject = (function (reason) {
-                            this._reject(reason);
-                            chainedPromise._reject(reason);
-                        }).bind(result);
+                        temp1 = result._resolve;
+                        temp2 = result._reject;
+                        defineProperties(result, {
+                            _resolve: {
+                                value: (function (value) {
+                                    temp1(value);
+                                    chainedPromise._resolve(value);
+                                }).bind(result)
+                            },
+                            _reject: {
+                                value: (function (reason) {
+                                    temp2(reason);
+                                    chainedPromise._reject(reason);
+                                }).bind(result)
+                            }
+                        });
                     }
-                } else
+                } else // add support for thenable object
                     chainedPromise._resolve(result);
             } catch (e) {
                 chainedPromise._reject(e);
@@ -1609,7 +1623,9 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         };
 
         nextOnRejected = function (reason) {
-            var result;
+            var result,
+                temp1,
+                temp2;
             try {
                 result = onRejected(reason);
                 if (isPromise(result)) {
@@ -1618,16 +1634,24 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
                     else if (isRejectedPromise(result))
                         chainedPromise._reject(result._reason);
                     else if (isPendingPromise(result)) {
-                        result._resolve = (function (value) {
-                            this._resolve(value);
-                            chainedPromise._resolve(value);
-                        }).bind(result);
-                        result._reject = (function (reason) {
-                            this._reject(reason);
-                            chainedPromise._reject(reason);
-                        }).bind(result);
+                        temp1 = result._resolve;
+                        temp2 = result._reject;
+                        defineProperties(result, {
+                            _resolve: {
+                                value: (function (value) {
+                                    temp1(value);
+                                    chainedPromise._resolve(value);
+                                }).bind(result)
+                            },
+                            _reject: {
+                                value: (function (reason) {
+                                    temp2(reason);
+                                    chainedPromise._reject(reason);
+                                }).bind(result)
+                            }
+                        });
                     }
-                } else
+                } else // add support for thenable object
                     chainedPromise._resolve(result);
             } catch (e) {
                 chainedPromise._reject(e);
@@ -1644,12 +1668,18 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return chainedPromise;
     };
 
+    Promise.prototype.catch = function (onRejected) {
+        if (!isCallable(this["then"]))
+            throw new TypeError("(var).then is not a function");
+        return this.then(undefined, onRejected);
+    };
+
     var defaultPromiseOnFulfilled = function (value) {
         return Promise.resolve(value);
     };
 
     var defaultPromiseOnRejected = function (reason) {
-        Promise.reject(reason);
+        return Promise.reject(reason);
     };
 
     var promiseResolve = function (value) {
@@ -1714,10 +1744,12 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
                 value: []
             },
             _resolve: {
-                value: promiseResolve.bind(promise)
+                value: promiseResolve.bind(promise),
+                configurable: true
             },
             _reject: {
-                value: promiseReject.bind(promise)
+                value: promiseReject.bind(promise),
+                configurable: true
             },
             _state: {
                 value: "pending",
