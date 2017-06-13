@@ -1556,7 +1556,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         if (isPromise(value))
             return value;
         return new Promise(function (resolve, reject) {
-            if (isObject(value) && isCallable(value.then)) {
+            if (isThenable(value)) {
                 addToMessageQueue(function () {
                     try {
                         value.then(resolve, reject);
@@ -1576,6 +1576,161 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         });
     };
 
+    Promise.race = function race(iterable) {
+        var isSettled = false;
+        return new Promise(function (resolve, reject) {
+            ES6.forOf(iterable, function (promise) {
+                var temp1,
+                    temp2;
+                if (isPromise(promise)) {
+                    if (isFulfilledPromise(promise)) {
+                        if (!isSettled) {
+                            isSettled = true;
+                            addToMessageQueue(function () {
+                                resolve(promise._value);
+                            });
+                        }
+                    }
+                    else if (isRejectedPromise(promise)) {
+                        if (!isSettled) {
+                            isSettled = true;
+                            addToMessageQueue(function () {
+                                reject(promise._reason);
+                            });
+                        }
+                    } else if (isPendingPromise(promise)) {
+                        temp1 = promise._resolve;
+                        temp2 = promise._reject;
+                        defineProperties(promise, {
+                            _resolve: {
+                                value: (function (value) {
+                                    temp1(value);
+                                    if (!isSettled) {
+                                        isSettled = true;
+                                        resolve(value);
+                                    }
+                                }).bind(promise)
+                            },
+                            _reject: {
+                                value: (function (reason) {
+                                    temp2(reason);
+                                    if (!isSettled) {
+                                        isSettled = true;
+                                        reject(reason);
+                                    }
+                                }).bind(promise)
+                            }
+                        });
+                    }
+                } else if (isThenable(promise)) {
+                    addToMessageQueue(function () {
+                        try {
+                            promise.then(function (value) {
+                                if (!isSettled) {
+                                    isSettled = true;
+                                    resolve(value);
+                                }
+                            }, function (reason) {
+                                if (!isSettled) {
+                                    isSettled = true;
+                                    reject(reason);
+                                }
+                            });
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                } else {
+                    if (!isSettled) {
+                        isSettled = true;
+                        addToMessageQueue(function () {
+                            resolve(promise);
+                        });
+                    }
+                }
+            })
+        });
+    };
+
+    Promise.all = function all(iterable) {
+        var promises = ES6.spreadOperator([]).spread(iterable).array(),
+            counter = 0,
+            length = promises.length,
+            values = new Array(length);
+
+        return new Promise(function (resolve, reject) {
+            if (length === 0)
+                resolve(values);
+            else {
+                promises.forEach(function (promise, index) {
+                    var temp1,
+                        temp2;
+                    if (isPromise(promise)) {
+                        if (isFulfilledPromise(promise)) {
+                            values[index] = promise._value;
+                            counter++;
+                            if (counter === length) {
+                                addToMessageQueue(function () {
+                                    resolve(values);
+                                });
+                            }
+                        } else if(isRejectedPromise(promise)) {
+                            addToMessageQueue(function () {
+                                reject(promise._reason);
+                            });
+                        } else if(isPendingPromise(promise)) {
+                            temp1 = promise._resolve;
+                            temp2 = promise._reject;
+                            defineProperties(promise, {
+                                _resolve: {
+                                    value: (function (value) {
+                                        temp1(value);
+                                        values[index] = value;
+                                        counter++;
+                                        if (counter === length) {
+                                            resolve(values);
+                                        }
+                                    }).bind(promise)
+                                },
+                                _reject: {
+                                    value: (function (reason) {
+                                        temp2(reason);
+                                        reject(reason);
+                                    }).bind(promise)
+                                }
+                            });
+                        }
+                    } else if (isThenable(promise)) {
+                        addToMessageQueue(function () {
+                            try {
+                                promise.then(function (value) {
+                                    values[index] = value;
+                                    counter++;
+                                    if (counter === length) {
+                                        resolve(values);
+                                    }
+                                }, function (reason) {
+                                    // If the returned promise is already rejected, then it does nothing
+                                    reject(reason);
+                                });
+                            } catch (e) {
+                                reject(e);
+                            }
+                        });
+                    } else {
+                        values[index] = promise;
+                        counter++;
+                        if (counter === length) {
+                            addToMessageQueue(function () {
+                                resolve(values);
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    };
+
     Promise.prototype.then = function then(onFulfilled, onRejected) {
         if (!isPromise(this))
             throw new TypeError(this + " is not a promise");
@@ -1587,72 +1742,20 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             nextOnRejected;
 
         nextOnFulfilled = function (value) {
-            var result,
-                temp1,
-                temp2;
+            var result;
             try {
                 result = onFulfilled(value);
-                if (isPromise(result)) {
-                    if (isFulfilledPromise(result))
-                        chainedPromise._resolve(result._value);
-                    else if (isRejectedPromise(result))
-                        chainedPromise._reject(result._reason);
-                    else if (isPendingPromise(result)) {
-                        temp1 = result._resolve;
-                        temp2 = result._reject;
-                        defineProperties(result, {
-                            _resolve: {
-                                value: (function (value) {
-                                    temp1(value);
-                                    chainedPromise._resolve(value);
-                                }).bind(result)
-                            },
-                            _reject: {
-                                value: (function (reason) {
-                                    temp2(reason);
-                                    chainedPromise._reject(reason);
-                                }).bind(result)
-                            }
-                        });
-                    }
-                } else // add support for thenable object
-                    chainedPromise._resolve(result);
+                processPromiseResult(result, chainedPromise);
             } catch (e) {
                 chainedPromise._reject(e);
             }
         };
 
         nextOnRejected = function (reason) {
-            var result,
-                temp1,
-                temp2;
+            var result;
             try {
                 result = onRejected(reason);
-                if (isPromise(result)) {
-                    if (isFulfilledPromise(result))
-                        chainedPromise._resolve(result._value);
-                    else if (isRejectedPromise(result))
-                        chainedPromise._reject(result._reason);
-                    else if (isPendingPromise(result)) {
-                        temp1 = result._resolve;
-                        temp2 = result._reject;
-                        defineProperties(result, {
-                            _resolve: {
-                                value: (function (value) {
-                                    temp1(value);
-                                    chainedPromise._resolve(value);
-                                }).bind(result)
-                            },
-                            _reject: {
-                                value: (function (reason) {
-                                    temp2(reason);
-                                    chainedPromise._reject(reason);
-                                }).bind(result)
-                            }
-                        });
-                    }
-                } else // add support for thenable object
-                    chainedPromise._resolve(result);
+                processPromiseResult(result, chainedPromise);
             } catch (e) {
                 chainedPromise._reject(e);
             }
@@ -1668,10 +1771,76 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return chainedPromise;
     };
 
+    var processPromiseResult = function (result, chainedPromise) {
+        var temp1,
+            temp2;
+        if (isPromise(result)) {
+            if (isFulfilledPromise(result))
+                chainedPromise._resolve(result._value);
+            else if (isRejectedPromise(result))
+                chainedPromise._reject(result._reason);
+            else if (isPendingPromise(result)) {
+                temp1 = result._resolve;
+                temp2 = result._reject;
+                defineProperties(result, {
+                    _resolve: {
+                        value: (function (value) {
+                            temp1(value);
+                            chainedPromise._resolve(value);
+                        }).bind(result)
+                    },
+                    _reject: {
+                        value: (function (reason) {
+                            temp2(reason);
+                            chainedPromise._reject(reason);
+                        }).bind(result)
+                    }
+                });
+            }
+        } else if (isThenable(result)) {
+            addToMessageQueue(function () {
+                try {
+                    result.then((function (value) {
+                        this._resolve(value);
+                    }).bind(chainedPromise), (function (reason) {
+                        this._reject(reason);
+                    }).bind(chainedPromise));
+                } catch (e) {
+                    chainedPromise._reject(e);
+                }
+            });
+        } else
+            chainedPromise._resolve(result);
+    };
+
     Promise.prototype.catch = function (onRejected) {
         if (!isCallable(this["then"]))
             throw new TypeError("(var).then is not a function");
-        return this.then(undefined, onRejected);
+        return this["then"](undefined, onRejected);
+    };
+
+    defineProperty(Promise.prototype, Symbol.toStringTag.toString(), {
+        value: "Promise",
+        configurable: true
+    });
+
+    // Although this method is not standard i.e. is not part of ES6,
+    // but it is given for testing purpose
+    Promise.prototype.toString = function () {
+        if (!isPromise(this))
+            throw new TypeError(this + " is not a promise");
+        switch (this._state) {
+            case "pending":
+                return "Promise { <pending> }";
+            case "fulfilled":
+                return "Promise { " + this._value + " }";
+            case "rejected":
+                return "Promise { <rejected> " + this._reason + " }";
+        }
+    };
+
+    var isThenable = function (value) {
+        return isObject(value) && isCallable(value.then);
     };
 
     var defaultPromiseOnFulfilled = function (value) {
