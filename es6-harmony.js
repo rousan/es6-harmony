@@ -1824,7 +1824,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         configurable: true
     });
 
-    // Although this method is not standard i.e. is not part of ES6,
+    // Although this method is not standard i.e. is not a part of ES6,
     // but it is given for testing purpose
     Promise.prototype.toString = function () {
         if (!isPromise(this))
