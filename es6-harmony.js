@@ -1,20 +1,15 @@
 /*!
- * ES6 Harmony v0.1.1
+ * ES6 Harmony v0.2.0
  * This module provides an equivalent implementation of ES6(Harmony)
- * in pure ES5 code and creates a ES6 environment for old browsers or
+ * in pure ES5 code and creates an ES6 environment for old browsers or
  * JavaScript engines that natively does not support ES6.(At least ES5 is required).
  * This Library is standalone, it has no dependency.
  *
  * @license Copyright (c) 2017 Ariyan Khan, MIT License
  *
- * Codebase: https://github.com/ariyankhan/es6-harmony.git
- * Date: Jun 12, 2017
+ * Codebase: https://github.com/ariyankhan/es6-harmony
+ * Date: Jun 14, 2017
  */
-
-
-var isBrowser = false;
-var testing = true;
-var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : global);
 
 (function (global, factory) {
 
@@ -24,22 +19,16 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
         // For the environment like NodeJS, CommonJS etc where module or
         // module.exports objects are available to export ES6 APIs.
-        if (testing)
-            module.exports.ES6 = factory(global);
-        else
-            module.exports = factory(global);
+        module.exports = factory(global);
     } else {
 
         // For browser context, where global object is window
-        // and the ES6 APIs is exported as 'ES6' property in window object.
-        // If 'ES6' property already exists then scripts returns immediately,
-        // it ensures that script will be executed once per environment
-        if (global.ES6 === null || typeof global.ES6 !== "object")
-            global.ES6 = factory(global);
+        // and the ES6 APIs is exported as 'ES6' property of window object
+        global.ES6 = factory(global);
     }
 
     /* window is for browser environment and global is for NodeJS environment */
-})(typeof window !== "undefined" ? window : _global, function (global) {
+})(typeof window !== "undefined" ? window : global, function (global) {
 
     "use strict";
 
@@ -61,11 +50,19 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
     var match = String.prototype.match;
 
+    var globalIsFinite = isFinite;
+
+    var floor = Math.floor;
+
     var max = Math.max;
 
     var min = Math.min;
 
     var create = Object.create;
+
+    var symbolBucket = create(null);
+
+    var symbolNamePattern = /^@@_____(\d+)_____$/;
 
     var emptyFunction = function () {};
 
@@ -132,7 +129,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return instance instanceof this;
     };
 
-    var es6InstanceOfOperator = function (object, constructor) {
+    var es6InstanceOfOperator = function instanceOf(object, constructor) {
         if (!isObject(constructor))
             throw new TypeError("Right-hand side of 'instanceof' is not an object");
 
@@ -270,7 +267,7 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return outputs;
     };
 
-    var es6ForOfLoop = function (iterable, callback, thisArg) {
+    var es6ForOfLoop = function forOf(iterable, callback, thisArg) {
         callback = typeof callback !== "function" ? emptyFunction : callback;
         if (typeof iterable[Symbol.iterator] !== "function")
             throw new TypeError("Iterable[Symbol.iterator] is not a function");
@@ -307,7 +304,9 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         if(this instanceof Symbol)
             throw new TypeError("Symbol is not a constructor");
 
-        return setupSymbolInternals(Object.create(Symbol.prototype), desc);
+        var newInstance = setupSymbolInternals(Object.create(Symbol.prototype), desc);
+        symbolBucket[newInstance._id] = newInstance;
+        return newInstance;
     };
 
     defineProperties(Symbol, {
@@ -1970,6 +1969,91 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         return promise instanceof Promise && checkPromiseInternals(promise);
     };
 
+    var es6NumberIsNaN = function isNaN(value) {
+        return typeof value === "number" && value !== value;
+    };
+
+    var es6NumberIsFinite = function isFinite(value) {
+        return typeof value === "number" && globalIsFinite(value);
+    };
+
+    var es6NumberIsInteger = function isInteger(value) {
+        return es6NumberIsFinite(value) && floor(value) === value;
+    };
+
+    var es6NumberIsSafeInteger = function isSafeInteger(value) {
+        return es6NumberIsInteger(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER;
+    };
+
+    var es6ObjectIs = function is(value1, value2) {
+        if (typeof value1 === "number" && typeof value2 === "number") {
+            if (value1 === 0 && value2 === 0)
+                return 1 / value1 === 1 / value2;
+            else if (es6NumberIsNaN(value1) && es6NumberIsNaN(value2))
+                return true;
+            else
+                return value1 === value2;
+        } else
+            return value1 === value2;
+    };
+
+
+    var es6ObjectSetPrototypeOf = function setPrototypeOf(obj, prototype) {
+        if (obj === undefined || obj === null)
+            throw new TypeError("Object.setPrototypeOf called on null or undefined");
+        if ( !(prototype === null || isObject(prototype)) )
+            throw new TypeError("Object prototype may only be an Object or null: " + String(prototype));
+
+        var protoDesc = Object.getOwnPropertyDescriptor(Object.prototype, "__proto__");
+        // If Object.prototype.__proto__ does not exist or it is
+        // not an accessor property then just throw errors
+        if (protoDesc === undefined || !isCallable(protoDesc.set))
+            throw new TypeError("Object.prototype.__proto__ accessor property does not exist");
+
+        protoDesc.set.call(obj, prototype);
+        return obj;
+    };
+
+    var es6ObjectAssign = function assign(target) {
+        if (target === null || target === undefined)
+            throw new TypeError("Cannot convert undefined or null to object");
+        target = Object(target);
+        var i,
+            j,
+            keys,
+            nextSource;
+
+        for(i = 1; i < arguments.length; ++i) {
+            nextSource = arguments[i];
+            if (nextSource === undefined || nextSource === null)
+                continue;
+            nextSource = Object(nextSource);
+            keys = Object.keys(nextSource);
+            for (j = 0; j < keys.length; ++j) {
+                target[keys[j]] = nextSource[keys[j]];
+            }
+        }
+        return target;
+    };
+
+    var es6ObjectGetOwnPropertySymbols = function getOwnPropertySymbols(obj) {
+        if (obj === null || obj === undefined)
+            throw new TypeError("Cannot convert undefined or null to object");
+        obj = Object(obj);
+        var ownProps = Object.getOwnPropertyNames(obj),
+            matched,
+            sId,
+            foundSymbols = [];
+        ownProps.forEach(function (prop) {
+            matched = prop.match(symbolNamePattern);
+            if (matched === null)
+                return;
+            sId = matched[1];
+            if (isSymbol(symbolBucket[sId]))
+                foundSymbols.push(symbolBucket[sId]);
+        });
+        return foundSymbols;
+    };
 
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
@@ -1986,16 +2070,22 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
         // This method behaves exactly same as ES6 for...of loop.
         forOf: es6ForOfLoop,
 
-        isMap: isMap,
-
         // This method gives same functionality of the spread operator of ES6
         // It works on only functions and arrays.
         // Limitation: You can't create array like this [...iterable, , , , 33] by this method,
         // to achieve this you have to do like this [...iterable, undefined, undefined, undefined, 33]
-        spreadOperator: es6SpreadOperator
-    };
+        spreadOperator: es6SpreadOperator,
 
-    // Add all the patches to support ES6 in ES5
+        isMap: isMap,
+
+        isSet: isSet,
+
+        isWeakMap: isWeakMap,
+
+        isWeakSet: isWeakSet
+    };
+    
+    // Apply all the patches to support ES6 in ES5.
     // If the running environment already supports ES6 then no patches will be applied,
     // just an empty object will be exported as 'ES6'.
     if (isES6Running())
@@ -2049,6 +2139,30 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
 
         defineProperty(Object.prototype, "toString", {
             value: es6ObjectPrototypeToString,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Object, "is", {
+            value: es6ObjectIs,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Object, "setPrototypeOf", {
+            value: es6ObjectSetPrototypeOf,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Object, "assign", {
+            value: es6ObjectAssign,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Object, "getOwnPropertySymbols", {
+            value: es6ObjectGetOwnPropertySymbols,
             writable: true,
             configurable: true
         });
@@ -2112,6 +2226,63 @@ var _global = testing ? (isBrowser ? window : exports) : (isBrowser ? window : g
             writable: true,
             configurable: true
         });
+
+        defineProperty(Number, "isNaN", {
+            value: es6NumberIsNaN,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Number, "isFinite", {
+            value: es6NumberIsFinite,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Number, "isInteger", {
+            value: es6NumberIsInteger,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Number, "parseInt", {
+            value: parseInt,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Number, "parseFloat", {
+            value: parseFloat,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Number, "isSafeInteger", {
+            value: es6NumberIsSafeInteger,
+            writable: true,
+            configurable: true
+        });
+
+        if (typeof Number.EPSILON !== "number") {
+            defineProperty(Number, "EPSILON", {
+                value: 2.220446049250313e-16
+            });
+        }
+
+        if (typeof Number.MAX_SAFE_INTEGER !== "number") {
+            defineProperty(Number, "MAX_SAFE_INTEGER", {
+                value: Math.pow(2, 53) - 1
+            });
+        }
+
+        if (typeof Number.MIN_SAFE_INTEGER !== "number") {
+            defineProperty(Number, "MIN_SAFE_INTEGER", {
+                value: -(Math.pow(2, 53) - 1)
+            });
+        }
+
+
+
     }
 
     return ES6;
