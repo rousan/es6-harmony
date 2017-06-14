@@ -1,5 +1,5 @@
 /*!
- * ES6 Harmony v0.2.0
+ * ES6 Harmony v0.2.1
  * This module provides an equivalent implementation of ES6(Harmony)
  * in pure ES5 code and creates an ES6 environment for old browsers or
  * JavaScript engines that natively does not support ES6.(At least ES5 is required).
@@ -8,7 +8,7 @@
  * @license Copyright (c) 2017 Ariyan Khan, MIT License
  *
  * Codebase: https://github.com/ariyankhan/es6-harmony
- * Date: Jun 14, 2017
+ * Date: Jun 15, 2017
  */
 
 (function (global, factory) {
@@ -2212,7 +2212,9 @@
 
         isWeakMap: isWeakMap,
 
-        isWeakSet: isWeakSet
+        isWeakSet: isWeakSet,
+
+        isPromise: isPromise
     };
     
     // Apply all the patches to support ES6 in ES5.
@@ -2261,18 +2263,6 @@
             value: es6FunctionPrototypeHasInstanceSymbol
         });
 
-        defineProperty(Array.prototype, "concat", {
-            value: es6ArrayPrototypeConcat,
-            writable: true,
-            configurable: true
-        });
-
-        defineProperty(Object.prototype, "toString", {
-            value: es6ObjectPrototypeToString,
-            writable: true,
-            configurable: true
-        });
-
         defineProperty(Object, "is", {
             value: es6ObjectIs,
             writable: true,
@@ -2297,20 +2287,14 @@
             configurable: true
         });
 
-        defineProperty(Array.prototype, Symbol.iterator.toString(), {
-            value: es6ArrayPrototypeIteratorSymbol,
+        defineProperty(Object.prototype, "toString", {
+            value: es6ObjectPrototypeToString,
             writable: true,
             configurable: true
         });
 
-        defineProperty(Array.prototype, "entries", {
-            value: es6ArrayPrototypeEntries,
-            writable: true,
-            configurable: true
-        });
-
-        defineProperty(Array.prototype, "keys", {
-            value: es6ArrayPrototypeKeys,
+        defineProperty(String, "fromCodePoint", {
+            value: es6StringFromCodePoint,
             writable: true,
             configurable: true
         });
@@ -2323,12 +2307,6 @@
 
         defineProperty(String.prototype, "codePointAt", {
             value: es6StringPrototypeCodePointAt,
-            writable: true,
-            configurable: true
-        });
-
-        defineProperty(String, "fromCodePoint", {
-            value: es6StringFromCodePoint,
             writable: true,
             configurable: true
         });
@@ -2365,6 +2343,30 @@
 
         defineProperty(Array, "of", {
             value: es6ArrayOf,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, Symbol.iterator.toString(), {
+            value: es6ArrayPrototypeIteratorSymbol,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "entries", {
+            value: es6ArrayPrototypeEntries,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "keys", {
+            value: es6ArrayPrototypeKeys,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(Array.prototype, "concat", {
+            value: es6ArrayPrototypeConcat,
             writable: true,
             configurable: true
         });
@@ -2446,9 +2448,6 @@
                 value: -(Math.pow(2, 53) - 1)
             });
         }
-
-
-
     }
 
     return ES6;
