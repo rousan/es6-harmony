@@ -42,6 +42,10 @@
 
     var slice = Array.prototype.slice;
 
+    var stringSlice = String.prototype.slice;
+
+    var stringIndexOf = String.prototype.indexOf;
+
     var isArray = Array.isArray;
 
     var objectToString = Object.prototype.toString;
@@ -59,6 +63,8 @@
     var min = Math.min;
 
     var create = Object.create;
+
+    var stringMaxLength = Infinity;
 
     var symbolBucket = create(null);
 
@@ -2055,6 +2061,130 @@
         return foundSymbols;
     };
 
+    var es6StringFromCodePoint = function fromCodePoint() {
+        var i = 0,
+            outChars = [],
+            codePoint,
+            length = arguments.length;
+        for (; i < length; ++i) {
+            codePoint = Number(arguments[i]);
+            if ( !(Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10FFFF) )
+                throw new RangeError("Invalid code point " + codePoint);
+            if (codePoint < 0x10000)
+                outChars.push(String.fromCharCode(codePoint));
+            else {
+                codePoint -= 0x10000;
+                outChars.push(String.fromCharCode((codePoint >> 10) + 0xD800));
+                outChars.push(String.fromCharCode((codePoint % 0x400) + 0xDC00));
+            }
+        }
+        return outChars.join("");
+    };
+
+    var es6StringPrototypeCodePointAt = function (position) {
+        if (this === undefined || this === null)
+            throw new TypeError("String.prototype.codePointAt called on null or undefined");
+        var self = String(this),
+            first,
+            second,
+            length = self.length;
+        position = Number(position);
+        position = Number.isNaN(position) ? 0 : position;
+        position = (position < 0 ? -1 : 1) * Math.floor(Math.abs(position));
+        if (position >= 0 && position < length) {
+            first = self.charCodeAt(position);
+            if (first >= 0xD800 && first <= 0xDBFF && position + 1 < length) {
+                second = self.charCodeAt(position + 1);
+                if (second >= 0xDC00 && second <= 0xDFFF)
+                    return (first - 0xD800) * 0x400 + second - 0xDC00 + 0x10000;
+                else
+                    return first;
+            } else
+                return first;
+        }
+    };
+
+    var es6StringPrototypeStartsWith = function startsWith(searchString, position) {
+        if (this === undefined || this === null)
+            throw new TypeError("String.prototype.startsWith called on null or undefined");
+        if (objectToString.call(searchString) === '[object RegExp]')
+            throw new TypeError("First argument to String.prototype.startsWith must not be a regular expression");
+
+        var self = String(this),
+            searchStringLength,
+            startIndex,
+            i = 0,
+            length = self.length;
+
+        searchString = String(searchString);
+        searchStringLength = searchString.length;
+
+        position = Number(position);
+        position = Number.isNaN(position) ? 0 : position;
+        position = (position < 0 ? -1 : 1) * Math.floor(Math.abs(position));
+
+        startIndex = min(max(position, 0), length);
+        if (startIndex + searchStringLength > length)
+            return false;
+
+        for(; i < searchStringLength; ++i) {
+            if ((searchString.charCodeAt(i)) !== self.charCodeAt(startIndex + i))
+                return false;
+        }
+        return true;
+    };
+
+    var es6StringPrototypeEndsWith = function endsWith(searchString, position) {
+        if (this === undefined || this === null)
+            throw new TypeError("String.prototype.endsWith called on null or undefined");
+        if (objectToString.call(searchString) === '[object RegExp]')
+            throw new TypeError("First argument to String.prototype.endsWith must not be a regular expression");
+
+        var self = String(this),
+            endIndex,
+            searchStringLength,
+            length = self.length;
+        searchString = String(searchString);
+        searchStringLength = searchString.length;
+        position = position === undefined ? length : position;
+        position = Number(position);
+        position = Number.isNaN(position) ? 0 : position;
+        position = (position < 0 ? -1 : 1) * Math.floor(Math.abs(position));
+
+        endIndex = min(max(position, 0), length);
+        return stringSlice.call(self, endIndex - searchStringLength, endIndex) === searchString;
+    };
+
+    var es6StringPrototypeIncludes = function includes(searchString, position) {
+        if (this === undefined || this === null)
+            throw new TypeError("String.prototype.endsWith called on null or undefined");
+        if (objectToString.call(searchString) === '[object RegExp]')
+            throw new TypeError("First argument to String.prototype.includes must not be a regular expression");
+        var self = String(this);
+        return stringIndexOf.call(self, searchString, position) !== -1;
+    };
+
+    // Apply `Exponentiation by squaring` algorithm, provides fast repeat
+    var repeatString = function repeatString(string, count) {
+        if (count < 1) { return ""; }
+        if (count % 2) { return repeatString(string, count - 1) + string; }
+        var half = repeatString(string, count / 2);
+        return half + half;
+    };
+
+    var es6StringPrototypeRepeat = function repeat(count) {
+        if (this === undefined || this === null)
+            throw new TypeError("String.prototype.repeat called on null or undefined");
+        var self = String(this);
+        count = Number(count);
+        count = Number.isNaN(count) ? 0 : count;
+        count = (count < 0 ? -1 : 1) * Math.floor(Math.abs(count));
+
+        if (count < 0 || count >= stringMaxLength)
+            throw new RangeError("Invalid count value");
+        return repeatString(self, count);
+    };
+
     // Some ES6 API can't be implemented in pure ES5, so this 'ES6' object provides
     // some equivalent functionality of these features.
     var ES6 = {
@@ -2187,6 +2317,42 @@
 
         defineProperty(String.prototype, Symbol.iterator.toString(), {
             value: es6StringPrototypeIteratorSymbol,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(String.prototype, "codePointAt", {
+            value: es6StringPrototypeCodePointAt,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(String, "fromCodePoint", {
+            value: es6StringFromCodePoint,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(String.prototype, "startsWith", {
+            value: es6StringPrototypeStartsWith,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(String.prototype, "endsWith", {
+            value: es6StringPrototypeEndsWith,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(String.prototype, "includes", {
+            value: es6StringPrototypeIncludes,
+            writable: true,
+            configurable: true
+        });
+
+        defineProperty(String.prototype, "repeat", {
+            value: es6StringPrototypeRepeat,
             writable: true,
             configurable: true
         });
