@@ -1,0 +1,35 @@
+{
+  "name": "es6-harmony",
+  "version": "0.2.0",
+  "description": "An equivalent implementation of ES6 in pure ES5 code for backward JavaScript engines",
+  "main": "es6-harmony.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node ./test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ariyankhan/es6-harmony.git"
+  },
+  "keywords": [
+    "es",
+    "es6",
+    "harmony",
+    "es6-harmony",
+    "polyfills",
+    "ponyfills",
+    "es5",
+    "js",
+    "javascript",
+    "ecmascript",
+    "es.next"
+  ],
+  "author": "Ariyan Khan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ariyankhan/es6-harmony/issues"
+  },
+  "homepage": "https://github.com/ariyankhan/es6-harmony#readme"
+}

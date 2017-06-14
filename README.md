@@ -1,16 +1,16 @@
 # ES6 Harmony
 
 Provides an equivalent implementation of ES6(Harmony)
-in pure ES5 code and creates a ES6 environment for old browsers or
+in pure ES5 code and creates an ES6 environment for old browsers or
 JavaScript Engines that natively does not support ES6.(At least ES5 is required).
 This Library is standalone, it has no dependency.
      
 ## Implementations
 
 * `Array`
+
     * `Array.from()`
     * `Array.of()`
-    * `get Array[@@species]`
     * `Array.prototype.fill()`
     * `Array.prototype.find()`
     * `Array.prototype.findIndex()`
@@ -18,8 +18,9 @@ This Library is standalone, it has no dependency.
     * `Array.prototype.keys()`
     * `Array.prototype.copyWithin()`
     * `Array.prototype[@@iterator]`
+    
 * `Map`
-    * `get Map[@@species]`
+
     * `Map.prototype.size`
     * `Map.prototype.set()`
     * `Map.prototype.get()`
@@ -32,8 +33,9 @@ This Library is standalone, it has no dependency.
     * `Map.prototype.values()`
     * `Map.prototype[@@iterator]()`
     * `Map.prototype[@@toStringTag]()`
+    
 * `Set`
-    * `get Set[@@species]`
+
     * `Set.prototype.size`
     * `Set.prototype.add()`
     * `Set.prototype.clear()`
@@ -45,22 +47,27 @@ This Library is standalone, it has no dependency.
     * `Set.prototype.values()`
     * `Set.prototype[@@iterator]()`
     * `Set.prototype[@@toStringTag]()`
+    
 * `WeakMap`
+
     * `WeakMap.prototype.delete()`
     * `WeakMap.prototype.get()`
     * `WeakMap.prototype.has()`
     * `WeakMap.prototype.set()`
     * `WeakMap.prototype[@@toStringTag]()`
+    
 * `WeakSet`
+
     * `WeakSet.prototype.add()`
     * `WeakSet.prototype.delete()`
     * `WeakSet.prototype.has()`
     * `WeakSet.prototype[@@toStringTag]()`
+    
 * `Symbol`
+
     * `Symbol.iterator`
     * `Symbol.hasInstance`
     * `Symbol.isConcatSpreadable`
-    * `Symbol.species`
     * `Symbol.toStringTag`
     * `Symbol.for()`
     * `Symbol.keyFor()`
