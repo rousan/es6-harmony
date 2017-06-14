@@ -1,7 +1,0 @@
-
-
-1. TypedArray.prototype[@@iterator](), entries
-4. @@StringTag will be added to Classes's prototype object
-5. @@StringTag will be added for TypedArray
-
-6. @@match, @@replace, @@search, @@split, @@species, @@toPrimitive, @@unscopables
