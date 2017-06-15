@@ -1,6 +1,6 @@
 {
   "name": "es6-harmony",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "An equivalent implementation of ES6 in pure ES5 code for old JavaScript engines",
   "main": "es6-harmony.js",
   "directories": {
