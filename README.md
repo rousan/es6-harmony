@@ -4,7 +4,7 @@ Provides an equivalent implementation of ES6(Harmony)
 in pure ES5 code and creates an ES6 environment for old browsers or
 JavaScript Engines. At least ES5 is required.
 To get standalone implementation of `Symbol`, `Promise`, or `Collections`(`Map`, `Set`, `WeakMap` and `WeakSet`)
-please visit [Symbol-ES6](https://github.com/ariyankhan/symbol-es6), [Promise-ES6](https://github.com/ariyankhan/promise-es6) and [Collections-ES6](https://github.com/ariyankhan/collections-es6).
+please visit [symbol-es6](https://github.com/ariyankhan/symbol-es6), [promise-es6](https://github.com/ariyankhan/promise-es6) and [collections-es6](https://github.com/ariyankhan/collections-es6).
      
 ## Implemented
 
@@ -121,7 +121,7 @@ Some features are not yet implemented, but can be implemented safely. Click
     
 ## Limitation
 
-Some ES6 features can't be implemented in ES5 natively like `spread operator`, `for..of` loop, 
+Some ES6 features can not be implemented in ES5 natively like `spread operator`, `for..of` loop, 
 ES6 version of `instanceOf` operator etc. So this module exports a object named `ES6` globally,
 that provides some approximate equivalent implementation of those features.
     
@@ -129,7 +129,7 @@ that provides some approximate equivalent implementation of those features.
 
 This object provides,
 
-   * `isSymbol()` (It can be used as equivalent API of `typeof symbol === 'symbol'`)
+   * `isSymbol()` (It can be used as equivalent API for `typeof symbol === 'symbol'`)
    * `instanceOf()` (Provides ES6 version of `instanceOf` operator)
    * `forOf()` (This method behaves exactly same as `for...of` loop)
    * `spreadOperator` (Gives same functionality of the `spread operator`)
