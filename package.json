@@ -1,7 +1,7 @@
 {
   "name": "es6-harmony",
   "version": "0.2.1",
-  "description": "An equivalent implementation of ES6 in pure ES5 code for backward JavaScript engines",
+  "description": "An equivalent implementation of ES6 in pure ES5 code for old JavaScript engines",
   "main": "es6-harmony.js",
   "directories": {
     "test": "test"
@@ -26,7 +26,10 @@
     "ecmascript",
     "es.next",
     "es6-symbol",
-    "es6-collections",
+    "es6-map",
+    "es6-set",
+    "es6-weakmap",
+    "es6-weakset",
     "es6-promise"
   ],
   "author": "Ariyan Khan",
