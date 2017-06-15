@@ -187,4 +187,3 @@ promise.then(function (value) {
 // 100
 // 110
 // Error
-
