@@ -2,7 +2,7 @@
  * ES6 Harmony v0.2.1
  * This module provides an equivalent implementation of ES6(Harmony)
  * in pure ES5 code and creates an ES6 environment for old browsers or
- * JavaScript engines that natively does not support ES6.(At least ES5 is required).
+ * JavaScript engines that natively does not support ES6. At least ES5 is required.
  * This Library is standalone, it has no dependency.
  *
  * @license Copyright (c) 2017 Ariyan Khan, MIT License
@@ -112,8 +112,10 @@
         this._done = false;
     };
 
+    // This method will be implemented later,
+    // now `false` just for development purpose
     var isES6Running = function() {
-        return false; /* Now 'false' for testing purpose */
+        return false;
     };
 
     var isObject = function (value) {
