@@ -6,7 +6,7 @@ JavaScript Engines. At least ES5 is required.
 To get standalone implementation of `Symbol`, `Promise`, or `Collections`(`Map`, `Set`, `WeakMap` and `WeakSet`),
 please visit [symbol-es6](https://github.com/ariyankhan/symbol-es6), [es6-promise-shim](https://github.com/ariyankhan/es6-promise-shim) and [collections-es6](https://github.com/ariyankhan/collections-es6).
      
-## Implemented
+## Implemented 
 
 * `Array`
 
