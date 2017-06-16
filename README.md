@@ -33,7 +33,7 @@ please visit [symbol-es6](https://github.com/ariyankhan/symbol-es6), [es6-promis
     * `Map.prototype.forEach()`
     * `Map.prototype.keys()`
     * `Map.prototype.values()`
-    * `Map.prototype[@@iterator]()`
+    * `Map.prototype[@@iterator]()` 
     * `Map.prototype[@@toStringTag]()`
     
 * `Set`
