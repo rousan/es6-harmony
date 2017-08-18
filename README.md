@@ -350,7 +350,7 @@ promise.then(function (value) {
    * [Rousan Ali](https://github.com/ariyankhan)
    
    Contributions are welcome
-   
+    
 ## License
 
 MIT License
