@@ -1,14 +1,13 @@
 /*!
- * ES6 Harmony v0.2.3
+ * ES6 Harmony v0.2.4
  * This module provides an equivalent implementation of ES6(Harmony)
- * in pure ES5 code and creates an ES6 environment for old browsers or
- * JavaScript engines that natively does not support ES6. At least ES5 is required.
- * This Library is standalone, it has no dependency.
+ * in pure ES5 and creates an ES6 environment for old browsers or
+ * JavaScript engines that natively does not support ES6.
  *
- * @license Copyright (c) 2017 Ariyan Khan, MIT License
+ * @license Copyright (c) 2017-2018 Rousan Ali, MIT License
  *
- * Codebase: https://github.com/ariyankhan/es6-harmony
- * Date: Jun 15, 2017
+ * Codebase: https://github.com/rousan/es6-harmony
+ * Date: 28th Jan, 2018
  */
 
 (function (global, factory) {
