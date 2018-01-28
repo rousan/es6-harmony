@@ -4,25 +4,29 @@
 
 # ES6 Harmony
 
-Provides an equivalent implementation of `ES6(Harmony)` in pure `ES5` code and creates an `ES6` environment for old browsers or JavaScript Engines.
+Provides an equivalent implementation of `ES6(Harmony)` in pure `ES5` and creates an `ES6` environment for old browsers and JavaScript Engines.
 
-> ES6 shims in ES5 code.
+> ES6 shims in pure ES5.
 
 ## Install
 
 ### NPM
 
-Install it from `npm` and require before any other modules:
+Install it from `npm` and `require` it before any other modules:
 
 ```bash
 $ npm install --save es6-harmony
+```
+
+```javascript
+var ES6 = require("es6-harmony");
 ```
 
 ### CDN
 
 If you prefer CDN, then just insert it into your HTML page on the top of other scripts:
 
-`<script src="https://cdn.jsdelivr.net/npm/es6-harmony"></script>`
+`<script src="https://cdn.jsdelivr.net/npm/es6-harmony/dist/es6-harmony.min.js"></script>`
 
 ## Examples
     
@@ -326,12 +330,12 @@ promise.then(function (value) {
 
 ## Not Yet Implemented
 
-Some features are not yet implemented, but can be implemented safely. Click [here](https://github.com/ariyankhan/es6-harmony/blob/master/not-yet-implemented.md) to view those features.
+Some features are not yet implemented, but can be implemented safely. Click [here](https://github.com/ariyankhan/es6-harmony/blob/master/not-yet-implemented.md) to see those features.
 
 ## Limitation
 
-Some ES6 features can not be implemented in ES5 natively like `spread operator`, `for..of` loop, ES6 version of `instanceOf` operator etc.
-So this module exports a object named `ES6` globally, that provides some approximate equivalent implementation of those features.
+Some `ES6` features can not be implemented in `ES5` natively like `spread operator`, `for..of` loop, `ES6` version of `instanceOf` operator etc.
+So this module exports an object named `ES6` globally, that provides some approximate equivalent implementation of those features.
 
 ## `ES6` Object
 
@@ -350,7 +354,6 @@ This object provides,
    * `isWeakSet`
    * `isPromise`
 
-
 ## Contributing
 
 Your PRs and stars are always welcome.
@@ -364,8 +367,8 @@ Please, try to follow:
 * Build the project.
 
 ```sh
-$ git clone https://github.com/rousan/vector.svg.git
-$ cd vector.svg
+$ git clone https://github.com/rousan/es6-harmony.git
+$ cd es6-harmony
 $ git checkout develop
 $ npm i
 $ npm run build
