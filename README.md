@@ -1,148 +1,29 @@
+[![NPM version](https://img.shields.io/npm/v/es6-harmony.svg)](https://www.npmjs.com/package/es6-harmony)
+[![NPM total downloads](https://img.shields.io/npm/dt/es6-harmony.svg)](https://www.npmjs.com/package/es6-harmony)
+[![License](https://img.shields.io/github/license/rousan/es6-harmony.svg)](https://github.com/rousan/es6-harmony/blob/master/LICENSE)
+
 # ES6 Harmony
 
-Provides an equivalent implementation of ES6(Harmony)
-in pure ES5 code and creates an ES6 environment for old browsers or
-JavaScript Engines. At least ES5 is required.
-To get standalone implementation of `Symbol`, `Promise`, or `Collections`(`Map`, `Set`, `WeakMap` and `WeakSet`),
-please visit [symbol-es6](https://github.com/ariyankhan/symbol-es6), [es6-promise-shim](https://github.com/ariyankhan/es6-promise-shim) and [collections-es6](https://github.com/ariyankhan/collections-es6).
-     
-## Implemented 
+Provides an equivalent implementation of `ES6(Harmony)` in pure `ES5` code and creates an `ES6` environment for old browsers or JavaScript Engines.
 
-* `Array`
+> ES6 shims in ES5 code.
 
-    * `Array.from()`
-    * `Array.of()`
-    * `Array.prototype.fill()`
-    * `Array.prototype.find()`
-    * `Array.prototype.findIndex()`
-    * `Array.prototype.entries()`
-    * `Array.prototype.keys()`
-    * `Array.prototype.copyWithin()`
-    * `Array.prototype.concat()` (ES6 version, addition of `@@isConcatSpreadable` support)
-    * `Array.prototype[@@iterator]`
-    
-* `Map`
+## Install
 
-    * `Map.prototype.size`
-    * `Map.prototype.set()`
-    * `Map.prototype.get()`
-    * `Map.prototype.has()`
-    * `Map.prototype.clear()`
-    * `Map.prototype.delete()`
-    * `Map.prototype.entries()`
-    * `Map.prototype.forEach()`
-    * `Map.prototype.keys()`
-    * `Map.prototype.values()`
-    * `Map.prototype[@@iterator]()` 
-    * `Map.prototype[@@toStringTag]()`
-    
-* `Set`
+### NPM
 
-    * `Set.prototype.size`
-    * `Set.prototype.add()`
-    * `Set.prototype.clear()`
-    * `Set.prototype.delete()`
-    * `Set.prototype.entries()`
-    * `Set.prototype.forEach()`
-    * `Set.prototype.has()`
-    * `Set.prototype.keys()`
-    * `Set.prototype.values()`
-    * `Set.prototype[@@iterator]()`
-    * `Set.prototype[@@toStringTag]()`
-    
-* `WeakMap`
+Install it from `npm` and require before any other modules:
 
-    * `WeakMap.prototype.delete()`
-    * `WeakMap.prototype.get()`
-    * `WeakMap.prototype.has()`
-    * `WeakMap.prototype.set()`
-    * `WeakMap.prototype[@@toStringTag]()`
-    
-* `WeakSet`
+```bash
+$ npm install --save es6-harmony
+```
 
-    * `WeakSet.prototype.add()`
-    * `WeakSet.prototype.delete()`
-    * `WeakSet.prototype.has()`
-    * `WeakSet.prototype[@@toStringTag]()`
-    
-* `Number`
-    
-    * `Number.isNaN()`
-    * `Number.isFinite()`
-    * `Number.isInteger()`
-    * `Number.parseInt()`
-    * `Number.parseFloat()`
-    * `Number.EPSILON`
-    * `Number.MAX_SAFE_INTEGER`
-    * `Number.MIN_SAFE_INTEGER`
-    * `Number.isSafeIntger()`
-    
-* `Object`
-    
-    * `Object.is()`
-    * `Object.setPrototypeOf()` (It assumes that `Object.prototype.__proto__` accessor property already exists)
-    * `Object.assign()`
-    * `Object.getOwnPropertySymbols`
-    * `Object.prototype.toString()` (ES6 version, addition of `@@toStringTag` support)
+### CDN
 
-* `Promise`
+If you prefer CDN, then just insert it into your HTML page on the top of other scripts:
 
-    * `Promise.all()`
-    * `Promise.race()`
-    * `Promise.reject()`
-    * `Promise.resolve()`
-    * `Promise.prototype.then()`
-    * `Promise.prototype.catch()`
+`<script src="https://cdn.jsdelivr.net/npm/es6-harmony"></script>`
 
-* `String`
-    
-    * `String.fromCodePoint()`
-    * `String.prototype.codePointAt()`
-    * `String.prototype.startsWith()`
-    * `String.prototype.endsWith()`
-    * `String.prototype.includes()`
-    * `String.prototype.repeat()`
-    
-* `Symbol`
-
-    * `Symbol.for()`
-    * `Symbol.keyFor()`
-    * `Symbol.iterator`
-    * `Symbol.hasInstance`
-    * `Symbol.isConcatSpreadable`
-    * `Symbol.toStringTag`
-    * `Symbol.prototype.toString()`
-    * `Symbol.prototype.valueOf()`
-    
-## Not Yet Implemented
-   
-Some features are not yet implemented, but can be implemented safely. Click 
-[here](https://github.com/ariyankhan/es6-harmony/blob/master/not-yet-implemented.md) to view those features.
-    
-## Limitation
-
-Some ES6 features can not be implemented in ES5 natively like `spread operator`, `for..of` loop, 
-ES6 version of `instanceOf` operator etc. So this module exports a object named `ES6` globally,
-that provides some approximate equivalent implementation of those features.
-    
-## `ES6` Object
-
-This object provides,
-
-   * `isSymbol()` (It can be used as equivalent API for `typeof symbol === 'symbol'`)
-   * `instanceOf()` (Provides ES6 version of `instanceOf` operator)
-   * `forOf()` (This method behaves exactly same as `for...of` loop)
-   * `spreadOperator` (Gives same functionality of the `spread operator`)
-   
-   Others utility methods,
-   
-   * `isMap`
-   * `isSet`
-   * `isWeakMap`
-   * `isWeakSet`
-   * `isPromise`
-
-    
 ## Examples
     
 ```javascript
@@ -334,43 +215,158 @@ promise.then(function (value) {
 // 110
 // Error
 ```
+
+## Implemented
+
+* `Array`
+
+    * `Array.from()`
+    * `Array.of()`
+    * `Array.prototype.fill()`
+    * `Array.prototype.find()`
+    * `Array.prototype.findIndex()`
+    * `Array.prototype.entries()`
+    * `Array.prototype.keys()`
+    * `Array.prototype.copyWithin()`
+    * `Array.prototype.concat()` (ES6 version, addition of `@@isConcatSpreadable` support)
+    * `Array.prototype[@@iterator]`
     
-## Installation
+* `Map`
 
-* In browser context, just insert this script on the top of other scripts
-* For NodeJS, just install it from npm
+    * `Map.prototype.size`
+    * `Map.prototype.set()`
+    * `Map.prototype.get()`
+    * `Map.prototype.has()`
+    * `Map.prototype.clear()`
+    * `Map.prototype.delete()`
+    * `Map.prototype.entries()`
+    * `Map.prototype.forEach()`
+    * `Map.prototype.keys()`
+    * `Map.prototype.values()`
+    * `Map.prototype[@@iterator]()` 
+    * `Map.prototype[@@toStringTag]()`
+    
+* `Set`
 
-    `npm install es6-harmony`
-     
-## Test
+    * `Set.prototype.size`
+    * `Set.prototype.add()`
+    * `Set.prototype.clear()`
+    * `Set.prototype.delete()`
+    * `Set.prototype.entries()`
+    * `Set.prototype.forEach()`
+    * `Set.prototype.has()`
+    * `Set.prototype.keys()`
+    * `Set.prototype.values()`
+    * `Set.prototype[@@iterator]()`
+    * `Set.prototype[@@toStringTag]()`
+    
+* `WeakMap`
 
-   `npm test`
-     
-## Contributors
-   * [Rousan Ali](https://github.com/ariyankhan)
+    * `WeakMap.prototype.delete()`
+    * `WeakMap.prototype.get()`
+    * `WeakMap.prototype.has()`
+    * `WeakMap.prototype.set()`
+    * `WeakMap.prototype[@@toStringTag]()`
+    
+* `WeakSet`
+
+    * `WeakSet.prototype.add()`
+    * `WeakSet.prototype.delete()`
+    * `WeakSet.prototype.has()`
+    * `WeakSet.prototype[@@toStringTag]()`
+    
+* `Number`
+    
+    * `Number.isNaN()`
+    * `Number.isFinite()`
+    * `Number.isInteger()`
+    * `Number.parseInt()`
+    * `Number.parseFloat()`
+    * `Number.EPSILON`
+    * `Number.MAX_SAFE_INTEGER`
+    * `Number.MIN_SAFE_INTEGER`
+    * `Number.isSafeIntger()`
+    
+* `Object`
+    
+    * `Object.is()`
+    * `Object.setPrototypeOf()` (It assumes that `Object.prototype.__proto__` accessor property already exists)
+    * `Object.assign()`
+    * `Object.getOwnPropertySymbols`
+    * `Object.prototype.toString()` (ES6 version, addition of `@@toStringTag` support)
+
+* `Promise`
+
+    * `Promise.all()`
+    * `Promise.race()`
+    * `Promise.reject()`
+    * `Promise.resolve()`
+    * `Promise.prototype.then()`
+    * `Promise.prototype.catch()`
+
+* `String`
+    
+    * `String.fromCodePoint()`
+    * `String.prototype.codePointAt()`
+    * `String.prototype.startsWith()`
+    * `String.prototype.endsWith()`
+    * `String.prototype.includes()`
+    * `String.prototype.repeat()`
+    
+* `Symbol`
+
+    * `Symbol.for()`
+    * `Symbol.keyFor()`
+    * `Symbol.iterator`
+    * `Symbol.hasInstance`
+    * `Symbol.isConcatSpreadable`
+    * `Symbol.toStringTag`
+    * `Symbol.prototype.toString()`
+    * `Symbol.prototype.valueOf()`
+
+## Not Yet Implemented
+
+Some features are not yet implemented, but can be implemented safely. Click [here](https://github.com/ariyankhan/es6-harmony/blob/master/not-yet-implemented.md) to view those features.
+
+## Limitation
+
+Some ES6 features can not be implemented in ES5 natively like `spread operator`, `for..of` loop, ES6 version of `instanceOf` operator etc.
+So this module exports a object named `ES6` globally, that provides some approximate equivalent implementation of those features.
+
+## `ES6` Object
+
+This object provides,
+
+   * `isSymbol()` (It can be used as equivalent API for `typeof symbol === 'symbol'`)
+   * `instanceOf()` (Provides ES6 version of `instanceOf` operator)
+   * `forOf()` (This method behaves exactly same as `for...of` loop)
+   * `spreadOperator` (Gives same functionality of the `spread operator`)
    
-   Contributions are welcome
-    
-## License
+   Others utility methods,
+   
+   * `isMap`
+   * `isSet`
+   * `isWeakMap`
+   * `isWeakSet`
+   * `isPromise`
 
-MIT License
 
-Copyright (c) 2017 Rousan Ali
+## Contributing
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Your PRs and stars are always welcome.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Please, try to follow:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+* Clone the repository.
+* Checkout `develop` branch.
+* Install dependencies.
+* Add your new features or fixes.
+* Build the project.
+
+```sh
+$ git clone https://github.com/rousan/vector.svg.git
+$ cd vector.svg
+$ git checkout develop
+$ npm i
+$ npm run build
+```
