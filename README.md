@@ -26,7 +26,9 @@ var ES6 = require("es6-harmony");
 
 If you prefer CDN, then just insert it into your HTML page on the top of other scripts:
 
-`<script src="https://cdn.jsdelivr.net/npm/es6-harmony/dist/es6-harmony.min.js"></script>`
+```html
+<script src="https://cdn.jsdelivr.net/npm/es6-harmony/dist/es6-harmony.min.js"></script>
+```
 
 ## Examples
     
@@ -353,23 +355,3 @@ This object provides,
    * `isWeakMap`
    * `isWeakSet`
    * `isPromise`
-
-## Contributing
-
-Your PRs and stars are always welcome.
-
-Please, try to follow:
-
-* Clone the repository.
-* Checkout `develop` branch.
-* Install dependencies.
-* Add your new features or fixes.
-* Build the project.
-
-```sh
-$ git clone https://github.com/rousan/es6-harmony.git
-$ cd es6-harmony
-$ git checkout develop
-$ npm i
-$ npm run build
-```

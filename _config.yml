@@ -1,1 +1,4 @@
 theme: jekyll-theme-cayman
+title: "ES6 Harmony"
+description: "ES6 equivalent implimentation in ES5 for old JavaScript engines"
+show_downloads: "true"
